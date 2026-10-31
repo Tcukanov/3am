@@ -1,6 +1,6 @@
 # Last Ride 3AM
 
-West Texas, August 1973. One night shift, three strangers in the back seat, and only your voice, the mirror and the radio. Passengers are spoken live through ElevenLabs conversational agents.
+Odessa, Texas, August 1973. You drive the night taxi and need $2,000 to leave town. Stay alive, be nice enough to earn tips, and use only your voice, the mirror and the radio. Passengers are spoken live through ElevenLabs conversational agents.
 
 ## Run locally
 
