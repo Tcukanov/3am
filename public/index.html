@@ -121,7 +121,6 @@ button.tape.pulse{animation:pulse 1.3s ease-in-out infinite}
     </form>
     <div id="dash" hidden>
       <button class="tape" id="bSilent" type="button"></button>
-      <button class="tape" id="bRadio" type="button"></button>
       <button class="tape" id="bSlow" type="button"></button>
       <button class="tape" id="bFast" type="button"></button>
       <button class="tape" id="bMirror" type="button"></button>
@@ -170,7 +169,7 @@ const reduced=matchMedia("(prefers-reduced-motion:reduce)").matches;
 const STR={
  en:{pitch:"West Texas, August 1973. One shift, three strangers, forty miles of dark between towns. No phones. Just the mirror, the radio and whatever you say next.",
   go:"Start the shift",code:"Play code",badcode:"That play code is wrong.",fine:"Talk out loud. Your browser will ask for the microphone, and passengers answer in their own voices. Headphones work best. All names and places are invented.",
-  ph:"Talk out loud, or type here…",send:"Say",silent:"Mic",radio:"Radio",slow:"Slower",fast:"Faster",mirror:"Mirror",stop:"Pull over",sound:"Sound",
+  ph:"Talk out loud, or type here…",send:"Say",silent:"Mic",slow:"Slower",fast:"Faster",mirror:"Mirror",stop:"Pull over",sound:"Sound",
   pickup:"Pull over",drivepast:"Keep driving",stepout:"Step out a minute",getout:"Ask them to get out",driveon:"Drive on",mi:"mi",mph:"mph",
   tip:"Click the mirror or press Tab to look. Faces are easy to miss from here.",
   quiet:"Says nothing.",waiting:"…",scripted:"Voice is unavailable, so passengers use written lines. Try reloading the page.",nomic:"The microphone is off. Type instead, and passengers will still answer aloud.",limit:"Claude usage limit reached. Scripted lines for now.",hiccup:"Connection hiccup. That reply was scripted.",
@@ -181,7 +180,7 @@ const STR={
   stoppedTip:"The engine ticks."},
  ru:{pitch:"Западный Техас, август 1973-го. Одна смена, трое незнакомцев, сорок миль темноты между городками. Ни телефонов. Только зеркало, радио и то, что ты скажешь дальше.",
   go:"Начать смену",code:"Код игры",badcode:"Неверный код игры.",fine:"Говорите вслух. Браузер попросит доступ к микрофону, пассажиры отвечают своими голосами. Лучше в наушниках. Все имена и места вымышлены.",
-  ph:"Говорите вслух или пишите сюда…",send:"Сказать",silent:"Микрофон",radio:"Радио",slow:"Медленнее",fast:"Быстрее",mirror:"Зеркало",stop:"Остановиться",sound:"Звук",
+  ph:"Говорите вслух или пишите сюда…",send:"Сказать",silent:"Микрофон",slow:"Медленнее",fast:"Быстрее",mirror:"Зеркало",stop:"Остановиться",sound:"Звук",
   pickup:"Остановиться",drivepast:"Ехать дальше",stepout:"Выйти на минуту",getout:"Попросить выйти",driveon:"Ехать дальше",mi:"миль",mph:"миль/ч",
   tip:"Нажмите на зеркало или Tab, чтобы посмотреть. Отсюда лицо легко пропустить.",
   quiet:"Молчит.",waiting:"…",scripted:"Голос недоступен, пассажиры говорят заготовленными репликами. Попробуйте перезагрузить страницу.",nomic:"Микрофон выключен. Пишите текстом, пассажиры всё равно ответят голосом.",limit:"Лимит Claude исчерпан. Пока заготовленные реплики.",hiccup:"Сбой связи. Этот ответ заготовлен заранее.",
@@ -282,7 +281,7 @@ const OUT={
 
 /* ---------- Game state ---------- */
 const G={lang:(navigator.language||"en").toLowerCase().startsWith("ru")?"ru":"en",
-  phase:"title",i:0,results:[],speed:0,target:0,looking:false,radio:false,muted:false,
+  phase:"title",i:0,results:[],speed:0,target:0,looking:false,muted:false,
   time:0,dist:0,ride:null,sample:null,aiOff:false,token:0,timeScale:1,tipShown:false,dirt:false,killer:true};
 
 /* ---------- Three.js scene ---------- */
@@ -477,7 +476,7 @@ drawGauge(0);
 const gaugeMat=new THREE.MeshBasicMaterial({map:gaugeTex,toneMapped:false});
 const gauge=new THREE.Mesh(new THREE.PlaneGeometry(.36,.12),gaugeMat);gauge.position.set(-.36,.75,-.605);gauge.rotation.x=-.1;car.add(gauge);
 const radioTex=canvasTex(256,70,(g,w,h)=>{g.fillStyle="#180f05";g.fillRect(0,0,w,h);g.fillStyle="#d6962f";g.font="bold 13px PT Mono,monospace";[54,60,70,80,90,100,120,140,160].forEach((f,i)=>g.fillText(f,8+i*27,24));g.fillStyle="#d6962f";g.fillRect(6,34,w-12,2);g.fillStyle="#ff3a18";g.fillRect(96,28,3,28);});
-const radioMat=new THREE.MeshBasicMaterial({map:radioTex,toneMapped:false,color:0x444444});
+const radioMat=new THREE.MeshBasicMaterial({map:radioTex,toneMapped:false});
 const radioM=new THREE.Mesh(new THREE.PlaneGeometry(.26,.07),radioMat);radioM.position.set(.16,.75,-.605);radioM.rotation.x=-.1;car.add(radioM);
 
 const specks=canvasTex(1024,512,(g,w,h)=>{g.clearRect(0,0,w,h);for(let i=0;i<340;i++){g.fillStyle=`rgba(190,170,130,${Math.random()*.32})`;const s=Math.random()*2.6+.5;g.beginPath();g.arc(Math.random()*w,Math.random()*h,s,0,7);g.fill();}g.strokeStyle="rgba(200,190,170,.018)";g.lineWidth=24;for(const dx of[280,740]){g.beginPath();g.arc(dx,h+40,300,3.5,5.9);g.stroke();}});
@@ -655,22 +654,25 @@ function initAudio(){
     Snd.white=white;
     const road=ctx.createBufferSource();road.buffer=noiseBuf;road.loop=true;const rf=ctx.createBiquadFilter();rf.type="lowpass";rf.frequency.value=420;const rg=ctx.createGain();rg.gain.value=0;road.connect(rf);rf.connect(rg);rg.connect(master);road.start();Snd.roadGain=rg;Snd.roadF=rf;
     const o1=ctx.createOscillator(),o2=ctx.createOscillator();o1.type="sawtooth";o2.type="square";const ef=ctx.createBiquadFilter();ef.type="lowpass";ef.frequency.value=160;const eg=ctx.createGain();eg.gain.value=0;o1.connect(ef);o2.connect(ef);ef.connect(eg);eg.connect(master);o1.start();o2.start();Snd.o1=o1;Snd.o2=o2;Snd.engineGain=eg;
-    /* AM radio: narrow band, static, and a slow waltz nobody can quite make out */
-    const rb=ctx.createBiquadFilter();rb.type="bandpass";rb.frequency.value=1150;rb.Q.value=1.1;const rv=ctx.createGain();rv.gain.value=0;rb.connect(rv);rv.connect(master);Snd.radioGain=rv;Snd.radioIn=rb;
-    const st=ctx.createBufferSource();st.buffer=white;st.loop=true;const sg=ctx.createGain();sg.gain.value=.05;st.connect(sg);sg.connect(rb);st.start();Snd.staticGain=sg;
-    Snd.mus=ctx.createGain();Snd.mus.gain.value=.55;Snd.mus.connect(rb);
-    Snd.step=0;Snd.next=ctx.currentTime+.1;
+    /* Background AM radio: a real track squeezed into a narrow band, with a little static. */
+    const rb=ctx.createBiquadFilter();rb.type="bandpass";rb.frequency.value=1300;rb.Q.value=.45;const rv=ctx.createGain();rv.gain.value=0;rb.connect(rv);rv.connect(master);Snd.radioGain=rv;
+    const st=ctx.createBufferSource();st.buffer=white;st.loop=true;const sg=ctx.createGain();sg.gain.value=.01;st.connect(sg);sg.connect(rb);st.start();Snd.staticGain=sg;
+    Snd.radioIn=rb;Snd.track=Math.floor(Math.random()*RADIO_TRACKS);playRadio();
   }catch(e){Snd.ctx=null;}
 }
-const WALTZ=[[220,277,330],[165,208,247],[185,233,277],[147,185,220]];
+function playRadio(){
+  const c=Snd.ctx,n=Snd.track++%RADIO_TRACKS+1;
+  fetch(`radio${n}.mp3`).then(r=>r.arrayBuffer()).then(b=>c.decodeAudioData(b)).then(buf=>{
+    const src=c.createBufferSource();src.buffer=buf;src.connect(Snd.radioIn);src.onended=()=>setTimeout(playRadio,2500);src.start();
+  }).catch(()=>{});
+}
+const RADIO_TRACKS=4;
+const RADIO_LEVEL=.15;  // overall radio volume; speech ducks it to 40%
 function tickRadio(){
-  if(!Snd.ctx||!G.radio)return;const c=Snd.ctx;
-  while(Snd.next<c.currentTime+.4){
-    const bar=WALTZ[(Snd.step/3|0)%4],beat=Snd.step%3,o=c.createOscillator(),g=c.createGain();o.type="triangle";
-    o.frequency.value=beat===0?bar[0]/1:bar[beat]*2;g.gain.setValueAtTime(0,Snd.next);g.gain.linearRampToValueAtTime(.34,Snd.next+.015);g.gain.exponentialRampToValueAtTime(.001,Snd.next+.6);
-    o.connect(g);g.connect(Snd.mus);o.start(Snd.next);o.stop(Snd.next+.7);Snd.next+=.52;Snd.step++;
-  }
-  Snd.staticGain.gain.value=.04+Math.max(0,Math.sin(G.time*.31)*Math.sin(G.time*.13))*.22;
+  if(!Snd.ctx)return;
+  Snd.staticGain.gain.value=.008+Math.max(0,Math.sin(G.time*.31)*Math.sin(G.time*.13))*.03;
+  const on=G.phase!=="title"&&G.phase!=="paper";
+  Snd.radioGain.gain.setTargetAtTime(on?RADIO_LEVEL*(Voice.speaking?.4:1):0,Snd.ctx.currentTime,.35);
 }
 function thunk(vol=.5,f=170){if(!Snd.ctx)return;const c=Snd.ctx,o=c.createOscillator(),g=c.createGain();o.frequency.setValueAtTime(f,c.currentTime);o.frequency.exponentialRampToValueAtTime(50,c.currentTime+.13);g.gain.setValueAtTime(vol,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.16);o.connect(g);g.connect(Snd.master);o.start();o.stop(c.currentTime+.2);}
 function whoosh(){if(!Snd.ctx)return;const c=Snd.ctx,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=Snd.white;f.type="bandpass";f.frequency.setValueAtTime(500,c.currentTime);f.frequency.exponentialRampToValueAtTime(150,c.currentTime+1.1);g.gain.setValueAtTime(0,c.currentTime);g.gain.linearRampToValueAtTime(.3,c.currentTime+.35);g.gain.linearRampToValueAtTime(0,c.currentTime+1.2);s.connect(f);f.connect(g);g.connect(Snd.master);s.start();s.stop(c.currentTime+1.3);}
@@ -680,7 +682,6 @@ function updateAudio(){
   const duck=Voice.speaking?.55:1;
   Snd.engineGain.gain.value=(G.phase==="title"?.03:.05+v*.07)*duck;
   Snd.roadGain.gain.value=v*.34*duck;Snd.roadF.frequency.value=280+v*520;
-  Snd.radioGain.gain.value=G.radio?.26:0;
   Snd.master.gain.value=G.muted?0:.7;
   tickRadio();
 }
@@ -708,7 +709,7 @@ function applyLang(){
   document.documentElement.lang=G.lang;
   $("pitch").textContent=t("pitch");$("codeLabel").textContent=t("code");$("go").textContent=t("go");$("fine").textContent=t("fine");
   $("lEn").classList.toggle("on",G.lang==="en");$("lRu").classList.toggle("on",G.lang==="ru");
-  $("say").placeholder=t("ph");$("send").textContent=t("send");$("bSilent").textContent=t("silent");$("bRadio").textContent=t("radio");
+  $("say").placeholder=t("ph");$("send").textContent=t("send");$("bSilent").textContent=t("silent");
   $("bSlow").textContent=t("slow");$("bFast").textContent=t("fast");$("bMirror").textContent=t("mirror");$("bStop").textContent=t("stop");$("bSound").textContent=t("sound");
   $("paperWait").textContent=t("paperWait");$("againB").textContent=t("again");$("pDate").textContent=t("date");$("pPrice").textContent=t("price");
   $("ad1").textContent=t("ad1");$("ad2").textContent=t("ad2");$("ad3").textContent=t("ad3");$("fict").textContent=t("fict");
@@ -902,6 +903,7 @@ function buildPrompt(r){
   const log=r.log.slice(-22).map(l=>`${l.who==="driver"?"DRIVER":l.who==="husband"?"RAY":"PASSENGER"}: ${l.text}`).join("\n");
   const world=[`Time ${clockText()}. Mile ${r.miles.toFixed(0)} of ${r.total} to ${def.dest}.`,
     G.dirt?"On a dirt road off the highway. No lights anywhere.":"Empty two-lane highway, West Texas desert, August 1973.",
+    "The car radio plays old country quietly through static.",
     follower.visible?"Headlights have held steady behind the car for miles.":""].filter(Boolean).join(" ");
   return `You play one person in a spoken road game, talking out loud inside a car at night. Stay inside this person. You are NOT an assistant: not helpful, not polite by default, and you do not answer everything.
 
@@ -1107,7 +1109,6 @@ $("talk").addEventListener("submit",e=>{
 });
 $("bSilent").onclick=()=>{Voice.micOn=!Voice.micOn;$("bSilent").classList.toggle("on",Voice.micOn);};
 $("bSilent").classList.add("on");
-$("bRadio").onclick=()=>{G.radio=!G.radio;$("bRadio").classList.toggle("on",G.radio);radioMat.color.set(G.radio?0xffffff:0x444444);thunk(.14,800);if(G.ride)talk({type:"event",quiet:true,text:G.radio?"The driver turned the radio on, faint country through static.":"The driver turned the radio off."});};
 $("bSlow").onclick=()=>{G.target=clamp(G.target-10,35,105);};
 $("bFast").onclick=()=>{G.target=clamp(G.target+10,35,105);};
 $("bSound").onclick=()=>{G.muted=!G.muted;$("bSound").classList.toggle("on",!G.muted);};

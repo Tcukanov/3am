@@ -114,6 +114,10 @@ createServer(async (req, res) => {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
     return res.end(readFileSync(join(here, "public/index.html")));
   }
+  if (/^\/radio\d\.mp3$/.test(url.pathname)) {
+    res.writeHead(200, { "content-type": "audio/mpeg" });
+    return res.end(readFileSync(join(here, "public", url.pathname)));
+  }
   if (url.pathname === "/api/session") return session(req, res);
   res.writeHead(404).end("Not found");
 }).listen(PORT, "127.0.0.1", () => console.log(`Last Ride 3AM: http://localhost:${PORT}`));
