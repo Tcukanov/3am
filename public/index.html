@@ -65,6 +65,9 @@ button.tape.pulse{animation:pulse 1.3s ease-in-out infinite}
 
 #mirrorNote{position:fixed;left:50%;top:62%;transform:translateX(-50%);font-family:var(--mono);font-size:14px;color:#d8d2bd;background:#000a;padding:6px 12px;max-width:min(60ch,90vw);text-align:center;pointer-events:none;opacity:0;transition:opacity .4s}
 #mirrorNote.show{opacity:1}
+#copFlash{position:fixed;inset:0;pointer-events:none;animation:cop 1s steps(2,jump-none) infinite}
+@keyframes cop{from{box-shadow:inset 0 0 120px 30px #d0201a88}to{box-shadow:inset 0 0 120px 30px #1f49d888}}
+@media (prefers-reduced-motion:reduce){#copFlash{animation:none;box-shadow:inset 0 0 120px 30px #d0201a66}}
 
 #fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .6s;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;box-sizing:border-box}
 #fade.solid{opacity:1;pointer-events:auto}
@@ -135,11 +138,13 @@ button.tape.pulse{animation:pulse 1.3s ease-in-out infinite}
       <button class="tape" id="bFast" type="button"></button>
       <button class="tape" id="bMirror" type="button"></button>
       <button class="tape" id="bStop" type="button"></button>
+      <button class="tape" id="bSheriff" type="button"></button>
       <button class="tape" id="bSound" type="button"></button>
     </div>
   </div>
 </div>
 <div id="mirrorNote"></div>
+<div id="copFlash" hidden></div>
 <div id="fade"><div id="card"></div></div>
 
 <div id="title">
@@ -181,6 +186,7 @@ const reduced=matchMedia("(prefers-reduced-motion:reduce)").matches;
 /* ---------- Strings ---------- */
 const STR={
  en:{pitch:"Odessa, Texas, August 1973. You drive the night taxi in a town that stinks of crude oil, and you want out. $1,500 gets you out, if you live to spend it.",
+  sheriff:"To the sheriff",sheriffDest:"SHERIFF",sheriffGo:"You turn off toward the county seat. The sheriff's office is {n} miles ahead. Give them a reason for the detour, or they'll work it out.",caughtOn:"In the mirror they've stopped looking out the window. They're looking at you.",keepOn:"Keep going for the sheriff",letOut:"Stop and let them out",reward:"Reward",charge:"False report",stay:"Stay and talk",takeIt:"Take it",lic:"Hand over your license",tell:"Tell him about your passenger",fineL:"Fine",ticket:"Speeding ticket",copLights:"Red and blue in your mirror. A county cruiser wants you over.",hintTalk:"They can hear you. Ask them something, or just say what's on your mind.",radioSays:"On the radio: ",
   last:"Last ride",gas:"Gas",tow:"Tow",fill:"Pull in for gas ($15)",keepgoing:"Keep going",lowgas:"The needle is on a quarter tank. There's a station ahead.",lastgas:"The needle is almost on E. Last station for a while.",pumped:"You fill the tank and don't look in the back seat.",pity:"You have nothing to pay with. The kid at the register gives you a few gallons anyway.",dry:"The engine coughs and dies. You roll to a stop in the dark. You're out of gas.",stopForThem:"Pull over",noStop:"Keep driving",waitThem:"Wait for them",leaveThem:"Leave them out there",floorIt:"Floor it",rollDown:"Roll the window down",stopCar:"Stop the car",drink:"Drink the coffee",noDrink:"No thanks",peeOut:"They get out and walk into the dark past your headlights.",knock:"Knuckles on your window. They came back on your side of the car, and they're not smiling.",
   bank:"Saved",of:"of",fare:"Fare",tipL:"Tip",ray:"Ray's money",nothing:"Nothing from this one.",box:"Cigar box",
   winH:"You made it out",winB:"The box holds {cash}. You fill the tank at sunrise and Odessa gets small in the mirror.",
@@ -191,9 +197,9 @@ const STR={
    ["Survive first","Staying alive is the main goal. If you die out here, you lose it all and start again from $0."],
    ["Be nice, get tips","Fares barely cover the gas, so tips are your ticket out. The more a passenger likes you, the more they leave."],
    ["Talk and watch","Talk out loud, and passengers answer in their own voices. Press Tab or click the mirror to see what their voices hide."],
-   ["Trust nobody","Fares change every night. Most are just strange. Some are robbers, and some have done this before. Nice may calm a robber. It won't stop the others."],
-   ["Nature calls","A passenger may ask you to pull over to pee. Say yes and you earn trust, or you get a knock on your window. Saying no costs you the tip."],
-   ["Watch the gas","Gas costs money and the needle keeps falling. Pull in while you can. Run dry out here and you lose the fare, pay for a tow, and sit in the dark with whoever you've got."]],
+   ["Trust nobody","Fares change every night. Most are just strange. Some are robbers, and some have done this before. Listen to the radio and watch the mirror for clues."],
+   ["The sheriff","Sure you've got a killer? Drive them to the sheriff for a $100 reward. Wrong guess costs you $150. Give them a good reason for the detour, because if they work it out first, you're in trouble."],
+   ["The road","Passengers ask to stop and pee, and that can be a trap. Gas runs out. Cops pull you over. Somebody may offer you something for fun, and your head won't thank you."]],
   go:"Start the shift",code:"Play code",badcode:"That play code is wrong.",fine:"Talk out loud. Your browser will ask for the microphone, and passengers answer in their own voices. Headphones work best. All names and places are invented.",
   ph:"Talk out loud, or type here…",send:"Say",silent:"Mic",slow:"Slower",fast:"Faster",mirror:"Mirror",stop:"Pull over",sound:"Sound",
   pickup:"Pull over",drivepast:"Keep driving",stepout:"Step out a minute",getout:"Ask them to get out",driveon:"Drive on",mi:"mi",mph:"mph",
@@ -205,6 +211,7 @@ const STR={
   late:"Three weeks later",year:"A year later",week:"A week later",today:"This morning",passed:"You left them on the shoulder.",
   stoppedTip:"The engine ticks."},
  ru:{pitch:"Одесса, Техас, август 1973-го. Ты ночной таксист в городе, который воняет нефтью, и ты хочешь отсюда уехать. Для этого нужно $1500, если доживёшь, чтобы их потратить.",
+  sheriff:"К шерифу",sheriffDest:"ШЕРИФ",sheriffGo:"Ты сворачиваешь к окружному центру. До шерифа {n} миль. Объясни пассажиру этот объезд, иначе он догадается.",caughtOn:"В зеркале пассажир больше не смотрит в окно. Он смотрит на тебя.",keepOn:"Ехать дальше к шерифу",letOut:"Остановиться и выпустить",reward:"Награда",charge:"Ложный донос",stay:"Остаться и поговорить",takeIt:"Взять",lic:"Отдать права",tell:"Рассказать о пассажире",fineL:"Штраф",ticket:"Штраф за скорость",copLights:"Красно-синие огни в зеркале. Патрульная машина требует остановиться.",hintTalk:"Пассажир тебя слышит. Спроси что-нибудь или просто скажи, что думаешь.",radioSays:"По радио: ",
   last:"Последняя поездка",gas:"Бензин",tow:"Буксир",fill:"Заехать на заправку ($15)",keepgoing:"Ехать дальше",lowgas:"Стрелка на четверти бака. Впереди заправка.",lastgas:"Стрелка почти на нуле. Заправок долго не будет.",pumped:"Ты заливаешь полный бак и не смотришь на заднее сиденье.",pity:"Платить нечем. Парень на кассе всё равно наливает тебе несколько галлонов.",dry:"Мотор кашляет и глохнет. Машина катится и встаёт в темноте. Бензин кончился.",stopForThem:"Остановиться",noStop:"Ехать дальше",waitThem:"Подождать",leaveThem:"Оставить там",floorIt:"В пол",rollDown:"Опустить стекло",stopCar:"Остановиться",drink:"Выпить кофе",noDrink:"Нет, спасибо",peeOut:"Пассажир выходит и уходит в темноту за светом фар.",knock:"Костяшки стучат в твоё окно. Пассажир вернулся с твоей стороны, и он не улыбается.",
   bank:"Накоплено",of:"из",fare:"Плата",tipL:"Чаевые",ray:"Деньги Рэя",nothing:"С этой поездки ничего.",box:"Коробка из-под сигар",
   winH:"Ты выбрался",winB:"В коробке {cash}. На рассвете ты заливаешь полный бак, и Одесса становится маленькой в зеркале.",
@@ -215,9 +222,9 @@ const STR={
    ["Сначала выжить","Главная цель: остаться в живых. Если погибнешь здесь, потеряешь всё и начнёшь снова с $0."],
    ["Будь милым, получишь чаевые","Плата едва покрывает бензин, так что уехать можно только на чаевых. Чем больше ты нравишься пассажиру, тем больше он оставит."],
    ["Говори и смотри","Говори вслух, и пассажиры ответят своими голосами. Нажми Tab или кликни на зеркало, чтобы увидеть то, что голос скрывает."],
-   ["Не верь никому","Каждую ночь новые пассажиры. Большинство просто странные. Есть грабители, а есть те, кто делает это не впервые. Доброта может успокоить грабителя, но не остальных."],
-   ["Зов природы","Пассажир может попросить остановиться по нужде. Согласишься, и заслужишь доверие или услышишь стук в своё окно. Откажешь, и не видать чаевых."],
-   ["Следи за бензином","Бензин стоит денег, а стрелка всё падает. Заезжай, пока можешь. Встанешь без бензина, и потеряешь плату, заплатишь за буксир и будешь сидеть в темноте с тем, кто сзади."]],
+   ["Не верь никому","Каждую ночь новые пассажиры. Большинство просто странные. Есть грабители, а есть те, кто делает это не впервые. Слушай радио и смотри в зеркало: там бывают улики."],
+   ["Шериф","Уверен, что сзади убийца? Отвези его к шерифу и получи $100 награды. Ошибёшься, заплатишь $150. Придумай хорошую причину для объезда: если пассажир догадается первым, тебе конец."],
+   ["Дорога","Пассажиры просят остановиться по нужде, и это может быть ловушка. Бензин кончается. Копы останавливают. Кто-то может предложить кое-что для забавы, и голове потом будет плохо."]],
   go:"Начать смену",code:"Код игры",badcode:"Неверный код игры.",fine:"Говорите вслух. Браузер попросит доступ к микрофону, пассажиры отвечают своими голосами. Лучше в наушниках. Все имена и места вымышлены.",
   ph:"Говорите вслух или пишите сюда…",send:"Сказать",silent:"Микрофон",slow:"Медленнее",fast:"Быстрее",mirror:"Зеркало",stop:"Остановиться",sound:"Звук",
   pickup:"Остановиться",drivepast:"Ехать дальше",stepout:"Выйти на минуту",getout:"Попросить выйти",driveon:"Ехать дальше",mi:"миль",mph:"миль/ч",
@@ -236,6 +243,7 @@ const L=o=>typeof o==="string"?o:o[G.lang];
 const PASSENGERS=[
 { id:"danny",look:"danny",where:{en:"Pecos",ru:"Пекос"},dest:"Odessa",total:30,fare:40,tipMax:60,station:"GAS",danger:.12,soft:true,
   killer:`TRUE SECRET, above everything else: the Army story is what you tell people. Tonight you robbed a liquor store in Pecos, you have a pistol in the duffel, and you need this driver's car and cash. You are scared and young, and you do not want to hurt anyone. If the driver is truly kind to you, you may lose your nerve. No graphic violence.`,
+  clue:{radio:{en:"Pecos deputies seek a young man with an army duffel after a liquor store holdup.",ru:"Помощники шерифа Пекоса ищут молодого человека с армейским вещмешком после ограбления винного магазина."},mirror:{en:"His hand stays inside the duffel. Something in there is heavy.",ru:"Его рука остаётся в вещмешке. Там что-то тяжёлое."},decoy:{en:"He keeps checking a paper from the duffel, then folding it.",ru:"Он всё достаёт из вещмешка бумагу и снова складывает её."}},
   approach:{en:"A kid in the light of the last pump. Duffel at his feet. One hand up for the cab, hopeful.",ru:"Парень в свете последней колонки. Вещмешок у ног. Рука поднята, ловит такси, с надеждой."},
   opener:{en:"Bus depot in Odessa, sir, if that's not too far.",ru:"До автобусной в Одессе, сэр, если это не слишком далеко."},
   pay:{good:{en:"He presses extra on you and shakes your hand too long.",ru:"Он суёт тебе лишнего и слишком долго жмёт руку."},bad:{en:"He leaves the exact fare on the seat without looking at you.",ru:"Он оставляет на сиденье ровно по счётчику, не глядя на тебя."}},
@@ -254,6 +262,7 @@ Set decided_not_to_go=true only if the driver has clearly talked him out of repo
   lines:{en:["Yes sir.","Rangers are something this year.","You drive this every night?","Sorry. Talking too much.","Guess so.","I don't know, sir.","It's real dark out here."],ru:["Да, сэр.","«Рейнджерс» в этом году что-то.","Вы тут каждую ночь ездите?","Простите. Заболтался.","Наверное.","Не знаю, сэр.","Темно тут совсем."]}
 },
 { id:"carol",look:"carol",where:{en:"Empty highway",ru:"Пустое шоссе"},dest:"Lubbock",total:36,fare:50,tipMax:150,prepaid:true,
+  clue:{decoy:{en:"Her sleeve slides up. There are bruises under it, and she pulls it down fast.",ru:"Рукав сползает. Под ним синяки, и она быстро его одёргивает."}},
   approach:{en:"A woman on the shoulder, miles from anything. Suitcase. Winter coat buttoned up, in August.",ru:"Женщина на обочине, вокруг ничего на много миль. Чемодан. Зимнее пальто застёгнуто наглухо, в августе."},
   opener:{en:"Lubbock. Here, I'll pay now. Please just go.",ru:"Лаббок. Вот, плачу сразу. Поезжайте, пожалуйста."},
   pay:{good:{en:"She folds the last of her bills into your shirt pocket and doesn't say why.",ru:"Она вкладывает последние купюры в карман твоей рубашки и не говорит зачем."},bad:{en:"She paid up front. She doesn't look back.",ru:"Она заплатила заранее. Не оглядывается."}},
@@ -271,6 +280,7 @@ SPEECH: clipped, dry humor, answers questions with questions. If asked directly 
   husband:`Ray Dunn, 41, is now at the driver's window with one hand on the roof. Friendly in the voice, not the eyes. "Evening. That's my wife you got there." He speaks to the driver man to man. Says she's sick, says she gets confused. Offers the driver two hundred dollars cash to unlock the back door. Never raises his voice.`
 },
 { id:"lyle",look:"lyle",where:{en:"Dot's Diner",ru:"Дайнер Дот"},dest:"Midland",total:30,fare:60,tipMax:300,station:"EAT",danger:.5,
+  clue:{radio:{en:"Midland County is asking about a polite man in a grey suit, last seen with a driver who never got home.",ru:"В округе Мидленд спрашивают о вежливом мужчине в сером костюме, которого видели с водителем, не вернувшимся домой."},mirror:{en:"He's writing something in a little book. It looks like what you just told him.",ru:"Он что-то пишет в маленькой книжке. Похоже, то, что ты только что сказал."},decoy:{en:"He's looking at an old photo of a woman, and he puts it away when you look.",ru:"Он смотрит на старое фото женщины и убирает его, когда ты смотришь."}},
   approach:{en:"A man in a good grey suit outside the diner, at three in the morning. He raises one finger, as if for a waiter.",ru:"Мужчина в хорошем сером костюме у дайнера, в три часа ночи. Поднимает палец, как официанту."},
   opener:{en:"Midland, friend. I'll make it worth your while.",ru:"До Мидленда, друг. Не обижу."},
   pay:{good:{en:"He pays double, in clean bills, and tells you to get some sleep.",ru:"Он платит вдвое, чистыми купюрами, и советует выспаться."},bad:{en:"He pays exactly and thanks you by the name you gave him.",ru:"Он платит ровно и благодарит, называя тебя по имени, которое ты дал."}},
@@ -291,6 +301,7 @@ Set gave_name / gave_kids / gave_home to true when the driver actually discloses
   lines:{en:["Is that right.","Good to hear a voice.","Family's the thing, friend.","You've got a careful way about you.","Long night.","I do appreciate this.","Mm. Go on."],ru:["Вот как.","Приятно слышать голос.","Семья — это главное, друг.","Ты человек осторожный.","Долгая ночь.","Очень тебе признателен.","Мм. Продолжай."]}
 },
 { id:"hank",look:"danny",colors:{skin:0x9c7458,cloth:0x5b4a33,hair:0x241a12},where:{en:"Oilfield road",ru:"Дорога у промысла"},dest:"Midland",total:32,fare:50,tipMax:150,station:"GAS",danger:.3,
+  clue:{radio:{en:"Deputies want to talk to a big man with a canvas bag about a driver found on the Crane road.",ru:"Помощники шерифа хотят поговорить с крупным мужчиной с брезентовой сумкой о водителе, найденном на дороге в Крейн."},mirror:{en:"Both his hands are fine. There isn't a cut on him.",ru:"Обе руки у него целы. На нём ни царапины."},decoy:{en:"He unwraps the rag and looks at his hand. It's bad. He wraps it again.",ru:"Он разматывает тряпку и смотрит на руку. Всё плохо. Он заматывает её снова."}},
   approach:{en:"A big man at the end of a lease road, waving you down with his left hand. There's blood on his right sleeve. Canvas bag at his boots.",ru:"Крупный мужчина в конце промысловой дороги, машет левой рукой. На правом рукаве кровь. У сапог брезентовая сумка."},
   opener:{en:"Midland. Hospital, if you would. Don't mind the shirt.",ru:"В Мидленд. В больницу, если можно. На рубашку не смотри."},
   pay:{good:{en:"He pays with a clean hand, adds a lot extra, and says you're all right.",ru:"Он платит чистой рукой, добавляет много сверху и говорит, что ты нормальный."},bad:{en:"He counts out the fare and doesn't say a thing.",ru:"Он отсчитывает плату и ничего не говорит."}},
@@ -304,6 +315,7 @@ SPEECH: slow, heavy, few words. Long pauses. Your manner must seem the same whet
   lines:{en:["Yep.","Long way.","Don't mind me.","That so.","Just drive.","Hm.","Hot night."],ru:["Ага.","Далеко ещё.","Не обращай внимания.","Вот как.","Просто езжай.","Хм.","Жаркая ночь."]}
 },
 { id:"opal",look:"carol",colors:{skin:0xb59a88,cloth:0x4a3f55,hair:0x8f8b86},where:{en:"Church on Highway 80",ru:"Церковь на шоссе 80"},dest:"Big Spring",total:30,fare:40,tipMax:120,danger:.25,
+  clue:{radio:{en:"Big Spring police ask anyone who knows an elderly widow with a green thermos to call them.",ru:"Полиция Биг-Спринга просит знающих пожилую вдову с зелёным термосом позвонить им."},mirror:{en:"She pours the coffee for you. She doesn't pour any for herself.",ru:"Она наливает кофе тебе. Себе она не наливает."},decoy:{en:"She's talking to the empty seat beside her, very softly, and smiling.",ru:"Она очень тихо говорит с пустым сиденьем рядом и улыбается."}},
   approach:{en:"A small old woman under the church porch light, past midnight. Hymnal, handbag, a green thermos. She waves as if she knows you.",ru:"Маленькая старушка под фонарём на крыльце церкви, за полночь. Псалтырь, сумочка, зелёный термос. Машет, будто знает тебя."},
   opener:{en:"Oh bless you, dear. Big Spring, and don't you rush.",ru:"Храни тебя господь, милый. В Биг-Спринг, и не торопись."},
   pay:{good:{en:"She presses a fold of bills into your hand and pats it shut.",ru:"Она вкладывает тебе в ладонь пачку купюр и закрывает твои пальцы."},bad:{en:"She counts the fare out in coins and tells you she'll pray for you.",ru:"Она отсчитывает плату мелочью и говорит, что помолится за тебя."}},
@@ -318,6 +330,7 @@ SPEECH: warm, chatty for you, old-fashioned. Your sweetness must be exactly the 
   lines:{en:["Bless your heart.","You look tired, dear.","Is there somebody at home?","Mr. Greer drove this road.","Oh my.","You're a good boy.","Such a dark night."],ru:["Храни тебя господь.","Ты устал, милый.","Дома тебя кто-нибудь ждёт?","Мистер Грир ездил этой дорогой.","Ох.","Хороший ты мальчик.","Какая тёмная ночь."]}
 },
 { id:"cody",look:"carol",colors:{skin:0xa8866a,cloth:0x4d5236,hair:0x4a3520},where:{en:"Truck stop, Monahans",ru:"Стоянка в Монаханс"},dest:"San Angelo",total:34,fare:30,tipMax:80,station:"GAS",danger:.25,soft:true,
+  clue:{radio:{en:"Ward County deputies seek a long-haired youth in an army jacket, believed to be carrying a knife.",ru:"Помощники шерифа округа Уорд ищут длинноволосого парня в армейской куртке, возможно с ножом."},mirror:{en:"He has something up his sleeve, and he keeps touching it.",ru:"У него что-то в рукаве, и он всё время это трогает."},decoy:{en:"He's reading a stack of letters and his lips are moving.",ru:"Он читает пачку писем, и его губы шевелятся."}},
   approach:{en:"A young man with long hair in an army jacket, barefoot on the gravel. He looks at your plate before he looks at you.",ru:"Парень с длинными волосами в армейской куртке, босиком на гравии. Сначала смотрит на номер машины, потом на тебя."},
   opener:{en:"San Angelo, man. I got money. I swear I got money.",ru:"В Сан-Анджело, друг. Деньги есть. Клянусь, есть."},
   pay:{good:{en:"He empties a sock full of bills into your hand and says thanks like it hurts.",ru:"Он вытряхивает тебе в руку носок с купюрами и благодарит так, будто ему больно."},bad:{en:"He pays the exact fare in crumpled ones and is gone before you turn around.",ru:"Он платит ровно мятыми бумажками и исчезает, пока ты не обернулся."}},
@@ -386,10 +399,35 @@ const OUT={
  }
 };
 
+/* Sheriff outcomes, shared by every fare. */
+const SUSPECTS={danny:{en:["Daniel Reece, 19","a Pecos liquor store holdup"],ru:["Дэниел Рис, 19 лет","ограбление винного магазина в Пекосе"]},carol:{en:["Mrs. Carol Dunn, 35",""],ru:["Кэрол Данн, 35 лет",""]},lyle:{en:["A man calling himself Walter Lyle","the deaths of two drivers"],ru:["Мужчина, называющий себя Уолтером Лайлом","гибель двух водителей"]},hank:{en:["A man calling himself Hank Tolliver","the deaths of three drivers"],ru:["Мужчина, называющий себя Хэнком Толливером","гибель трёх водителей"]},opal:{en:["Mrs. Opal Greer, 68","the deaths of three husbands"],ru:["Опал Грир, 68 лет","гибель трёх мужей"]},cody:{en:["Cody Rusk, 22","an armed robbery in Ward County"],ru:["Коди Раск, 22 года","вооружённое ограбление в округе Уорд"]}};
+for(const[id,n]of Object.entries(SUSPECTS)){
+  OUT[id].turned_in={when:"today",facts:`${n.en[0]} was delivered to the sheriff by a cab driver and is held in ${n.en[1]}.`,en:["Cab Driver Delivers Suspect",`${n.en[0]} was delivered to the sheriff's office by an Odessa cab driver and is being held in ${n.en[1]}. The driver collected the reward.`],ru:["Таксист привёз подозреваемого",`${n.ru[0]}: таксист из Одессы доставил к шерифу, задержание по делу: ${n.ru[1]}. Водитель получил награду.`]};
+  OUT[id].false_report={when:"today",facts:`${n.en[0]} was held four hours by the sheriff on a cab driver's word and released. The driver was fined.`,en:["Driver Fined for False Report",`${n.en[0]} was held four hours at the sheriff's office on a cab driver's word, then released with an apology. The driver was fined.`],ru:["Таксиста оштрафовали за ложный донос",`${n.ru[0]}: четыре часа у шерифа со слов таксиста, затем отпустили с извинениями. Водителя оштрафовали.`]};
+}
+/* Now and then a passenger carries a story nobody would believe. The AI tells it its own way. */
+const STORIES=[
+ {text:"Last summer the Marfa lights followed your truck for eleven miles and stopped when you stopped. You still have the burn on your forearm, and you can't sleep near windows.",en:["Lights Reported Near Marfa","Three ranchers report lights over the Marfa flats that kept pace with their trucks. The Air Force has no comment."],ru:["Огни у Марфы","Трое ранчеро сообщают об огнях над равниной Марфы, которые держались вровень с их машинами. ВВС не комментируют."]},
+ {text:"You drove a sealed trunk from Portland to El Paso two years ago, for a quiet man who paid in brand-new twenties, right after the D.B. Cooper hijacking. You opened it once, and you've been running since.",en:["Twenties Traced in El Paso","Bank examiners in El Paso report new twenties matching serial numbers from the Cooper hijacking of 1971."],ru:["Двадцатки в Эль-Пасо","Банковские инспекторы Эль-Пасо сообщают о новых двадцатках с номерами из дела об угоне Купера 1971 года."]},
+ {text:"You have read your own obituary twice. Both were real, from different towns, with photos. Someone has been burying you, and each time the mourners were strangers who cried.",en:["Paper Regrets Error","This newspaper regrets an obituary printed in error. The family named in it could not be found, and neither could the funeral home."],ru:["Газета приносит извинения","Газета приносит извинения за ошибочный некролог. Названную в нём семью найти не удалось, как и похоронное бюро."]},
+ {text:"You were mayor of a town called Harlan, Texas, population 212. You went to Abilene for a week in 1961, and when you came back it wasn't there. No foundations, no road, and nobody remembers it.",en:["No Record of Harlan","The county clerk says she has received a third inquiry this year about a town called Harlan. There's no such town on any map in the office."],ru:["Записей о Харлане нет","Окружной клерк говорит, что это уже третий запрос за год о городе Харлан. Такого города нет ни на одной карте в конторе."]},
+ {text:"You won a pink Cadillac from Elvis Presley in a card game in an El Paso motel in 1971, and he paid up. Three days later two men in suits came to buy it back at any price, and they wanted to know what he told you.",en:["Pink Cadillac in Stock Tank","A pink Cadillac was pulled from a stock tank near Kermit. It has no plates, and the rancher says he's never seen it before."],ru:["Розовый кадиллак в поилке","Из поилки для скота у Кермита достали розовый кадиллак без номеров. Ранчеро говорит, что никогда его не видел."]},
+ {text:"You poured concrete at Houston for NASA. A drunk engineer told you Apollo 17 was the last moon landing for a reason, and showed you a photo from the far side. You've seen it, and you won't look up at night.",en:["NASA Denies Rumor","A NASA spokesman calls a rumor about Apollo photographs 'not worth a reply'. He declined to reply further."],ru:["НАСА опровергает слухи","Представитель НАСА назвал слух о снимках «Аполлона» не заслуживающим ответа. От дальнейших ответов он отказался."]},
+ {text:"At a tent revival in 1958 a rattlesnake bit you nine times and you didn't die. Since then, every snake you meet goes still and stares. You can't explain it, and it frightens you more than dying would have.",en:["Rattler Roundup Halted","A rattlesnake roundup at Sweetwater was halted when the snakes stopped moving all at once. It lasted about a minute."],ru:["Облава на гремучников сорвалась","Облаву на гремучих змей в Свитуотере остановили, когда змеи разом перестали двигаться. Это длилось около минуты."]},
+ {text:"For eleven years someone has mailed you photographs of yourself asleep, in every house you've lived in. Yesterday's came with a photo of a taxi at night, and you can't help noticing this one looks like it.",en:["Photographs Found in Mailbox","A Monahans postman reports an unaddressed envelope of photographs of a cab at night. The sheriff is not treating it as a crime."],ru:["Снимки в почтовом ящике","Почтальон из Монаханс сообщает о конверте без адреса со снимками такси ночью. Шериф не считает это преступлением."]}];
+const ROADEV=[
+ {en:"A coyote stands in your lights, doesn't move, then isn't there.",ru:"Койот стоит в свете фар, не двигается, а потом его уже нет.",ai:"A coyote just stood in the headlights and vanished."},
+ {en:"A white cross goes by on the shoulder. Then another. Then three together.",ru:"На обочине белый крест. Потом ещё один. Потом сразу три.",ai:"Roadside crosses just went by."},
+ {en:"A car sits dark on the shoulder with its door open. Nobody near it.",ru:"На обочине тёмная машина с открытой дверью. Рядом никого.",ai:"You just passed a dark car on the shoulder with its door open and nobody around."},
+ {en:"Lightning walks along the horizon without a sound.",ru:"Молнии идут по горизонту без единого звука.",ai:"Silent lightning is moving along the horizon."},
+ {en:"The radio drops out. Just for a moment, someone seems to be reading numbers.",ru:"Радио пропадает. На миг кажется, что кто-то читает цифры.",ai:"The radio just cut out and someone seemed to read numbers."},
+ {en:"Something hits the windshield, hard, and leaves no mark.",ru:"Что-то сильно бьёт в лобовое стекло и не оставляет следа.",ai:"Something just hit the windshield hard and left no mark."}];
+const COP_CARD=`Deputy Earl Tate, 50s, county deputy. Tired, slow, not stupid. You pulled this cab over and you are at the driver's window with a flashlight. You want his license, where he's headed, and who that is in the back. You call him "son".`;
+
 /* ---------- Game state ---------- */
 const G={lang:(navigator.language||"en").toLowerCase().startsWith("ru")?"ru":"en",
   phase:"title",i:0,results:[],speed:0,target:0,looking:false,muted:false,
-  time:0,dist:0,ride:null,sample:null,aiOff:false,token:0,timeScale:1,tipShown:false,dirt:false,killer:true,night:0,cash:0,nightNo:0,fuel:.8,roster:[],deck:null};
+  time:0,dist:0,ride:null,sample:null,aiOff:false,token:0,timeScale:1,tipShown:false,dirt:false,killer:true,night:0,cash:0,nightNo:0,fuel:.8,roster:[],deck:null,high:0,stories:[]};
 /* Cash carries over between nights and reloads; dying or winning resets it. */
 const GOAL=1500,START=0,GAS_PRICE=15,TOW_PRICE=25,TANK_MILES=70;
 const SLOTS=[[23,40],[1,22],[3,0]];
@@ -397,11 +435,11 @@ const SLOTS=[[23,40],[1,22],[3,0]];
 function dealRoster(){
   if(!G.deck||G.deck.length<3){G.deck=PASSENGERS.slice();for(let i=G.deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[G.deck[i],G.deck[j]]=[G.deck[j],G.deck[i]];}}
   G.roster=G.deck.splice(0,3).sort((a,b)=>(a.id==="lyle")-(b.id==="lyle"));
-  G.fuel=rand(.6,.95);
+  G.fuel=rand(.6,.95);G.high=0;G.stories=[];
 }
-const money=n=>"$"+n.toLocaleString("en-US");
+const money=n=>(n<0?"−":"")+"$"+Math.abs(n).toLocaleString("en-US");
 function setCash(v){G.cash=v;try{localStorage.setItem("lr3am-bank",String(v));}catch(e){}}
-try{const v=parseInt(localStorage.getItem("lr3am-bank"),10);G.cash=v>=0&&v<GOAL?v:START;}catch(e){G.cash=START;}
+try{const v=parseInt(localStorage.getItem("lr3am-bank"),10);G.cash=Number.isInteger(v)&&v<GOAL?v:START;}catch(e){G.cash=START;}
 
 /* ---------- Three.js scene ---------- */
 const canvas=$("gl");
@@ -833,7 +871,7 @@ function applyLang(){
   $("codeLabel").textContent=t("code");$("go").textContent=t("go");$("fine").textContent=t("fine");
   $("lEn").classList.toggle("on",G.lang==="en");$("lRu").classList.toggle("on",G.lang==="ru");
   $("say").placeholder=t("ph");$("send").textContent=t("send");$("bSilent").textContent=t("silent");
-  $("bSlow").textContent=t("slow");$("bFast").textContent=t("fast");$("bMirror").textContent=t("mirror");$("bStop").textContent=t("stop");$("bSound").textContent=t("sound");
+  $("bSlow").textContent=t("slow");$("bFast").textContent=t("fast");$("bMirror").textContent=t("mirror");$("bStop").textContent=t("stop");$("bSheriff").textContent=t("sheriff");$("bSound").textContent=t("sound");
   $("paperWait").textContent=t("paperWait");$("againB").textContent=t("again");$("pPrice").textContent=t("price");
   $("ad1").textContent=t("ad1");$("ad2").textContent=t("ad2");$("ad3").textContent=t("ad3");$("fict").textContent=t("fict");
 }
@@ -846,7 +884,8 @@ function updateStatus(){
   $("cash").textContent=`${money(G.cash)} / ${money(GOAL)}`;
   $("fuel").textContent=`${t("gas")} ${Math.round(G.fuel*100)}%`;$("fuel").style.color=G.fuel<.22?"var(--amber)":"";
   const r=G.ride;
-  $("dest").textContent=r&&r.def?`${r.def.dest.toUpperCase()} ${Math.max(0,Math.ceil(r.total-r.miles))} ${t("mi")}`:"";
+  $("dest").textContent=r&&r.def?(r.plan?`${t("sheriffDest")} ${Math.max(0,Math.ceil(r.plan.mile-r.miles))} ${t("mi")}`:`${r.def.dest.toUpperCase()} ${Math.max(0,Math.ceil(r.total-r.miles))} ${t("mi")}`):"";
+  $("bSheriff").disabled=!r||r.stage!=="road"||!!r.plan;
   $("dest").hidden=!r;
 }
 
@@ -887,6 +926,11 @@ async function board(){
   const r=freshRide(def);G.ride=r;
   G.killer=Math.random()<(def.danger||0);
   r.peeMile=Math.random()<(G.killer&&def.id!=="lyle"?1:.4)?rand(7,r.total-7):null;
+  r.clueMile=rand(5,r.total-6);r.radioClue=def.clue&&def.clue.radio&&Math.random()<(G.killer?.6:.1);
+  r.copMile=Math.random()<.2?rand(6,r.total-5):null;
+  r.offerMile=def.id!=="opal"&&Math.random()<.25?rand(4,r.total-8):null;
+  if(Math.random()<.5){r.story=STORIES[Math.floor(Math.random()*STORIES.length)];G.stories.push(r.story);}
+  r.lastDriver=G.time;
   G.phase="ride";G.target=62;
   await wait(500);fade(false);setControls(true);
   setPose(def.id==="carol"?"out_window":"neutral");
@@ -921,7 +965,23 @@ function onChoice(id){
   else if(id==="peeWait"){peeWait(r);}
   else if(id==="peeLeave"){endRide(G.killer?"escaped":r.def.id==="lyle"?"innocent_later":"put_out",{turn:{en:"You pull away with the back door still swinging.\nNobody pays for a ride they didn't finish.",ru:"Ты уезжаешь, задняя дверь ещё качается.\nЗа незаконченную поездку никто не платит."}});}
   else if(id==="rolldown"){stopOnDirt(r);}
+  else if(id==="flee"&&G.high>.25&&Math.random()<.3){G.target=0;thunk(.7,70);fade(true,G.lang==="ru"?"Дорога уходит влево. Ты нет.":"The road goes left. You don't.");setTimeout(()=>{if(G.ride===r)endRide("driver_dead",{silent:true,dead:true});},2600/G.timeScale);}
   else if(id==="flee"){endRide("escaped",{turn:{en:"You stomp it. In the mirror, a shape in the road gets small.\nNo fare. You're alive.",ru:"Ты давишь в пол. В зеркале фигура на дороге становится маленькой.\nПлаты нет. Ты жив."}});}
+  else if(id==="keepOn"){
+    setChoices(null);r.event=null;const left=r.plan.mile-r.miles;G.target=95;
+    if(Math.random()<clamp(1-(left-1)/5,.1,.95))r.plan.figured=false;else stopOnDirt(r);
+  }
+  else if(id==="letOut"){endRide("escaped",{turn:{en:"You stop. They get out, slowly, and look at your plate.\nNo fare, no reward. You're alive.",ru:"Ты останавливаешься. Пассажир медленно выходит и смотрит на твой номер.\nНи платы, ни награды. Ты жив."}});}
+  else if(id==="takeStuff"){r.event=null;G.high=G.killer?1.6:1;thunk(.2);r.s.trust=clamp(r.s.trust+12,0,100);r.directive="The driver took what you offered. A few amused words.";r.beatLine={en:"There you go. Give it a minute.",ru:"Вот так. Подожди минутку."};talk({type:"beat"});}
+  else if(id==="noStuff"){r.event=null;r.s.trust=clamp(r.s.trust-3,0,100);r.directive="The driver said no thanks. Shrug it off in a few words.";r.beatLine={en:"Suit yourself.",ru:"Как хочешь."};talk({type:"beat"});}
+  else if(id==="copOver"){copStop(r);}
+  else if(id==="copLic"){copLicense(r);}
+  else if(id==="copTell"){$("copFlash").hidden=true;atSheriff(r);}
+  else if(id==="copRun"){
+    setChoices(null);r.event=null;$("copFlash").hidden=true;
+    if(Math.random()<.5)endRide(lostFare(r),{items:[[t("fineL"),-200]],turn:{en:"He gets you nine miles on, with two more cars.\nYour passenger walks, and you pay.",ru:"Через девять миль тебя берут уже три машины.\nПассажир уходит пешком, платишь ты."}});
+    else{r.stage="road";G.target=95;if(Voice.who!=="passenger")Voice.start(r,{voice:VOICES[r.def.id]});r.directive="The driver just ran from the police with you in the back. React in a few words.";r.beatLine={en:"What are you doing?!",ru:"Ты что творишь?!"};talk({type:"beat"});}
+  }
   else if(id==="gasIn"){gasStop(r);}
   else if(id==="gasNo"){r.event=null;}
   else if(id==="drink"){
@@ -979,6 +1039,62 @@ function pushStop(r){
   r.beatLine={en:"Pull over now. I'm not asking.",ru:"Останови сейчас. Я не прошу."};talk({type:"beat"});
   setChoices([{id:"flee",label:{en:t("floorIt"),ru:t("floorIt")}},{id:"stopcar",label:{en:t("stopCar"),ru:t("stopCar")}}],id=>onChoice(id));
 }
+/* ---------- The sheriff: the code knows the truth, the AI decides when the passenger catches on ---------- */
+function goSheriff(r){
+  if(r.stage!=="road"||r.plan)return;
+  const n=Math.round(rand(5,7));
+  r.plan={mile:r.miles+n,asks:0,lastAsk:G.time,figured:false,caught:false,shown:false};
+  r.peeMile=r.pushMile=r.copMile=r.offerMile=null;r.event=null;setChoices(null);r.lastDriver=G.time;
+  narrate(t("sheriffGo").replace("{n}",n),10);
+  r.directive="The driver just left your route and turned toward the lights of a town, with no explanation. If you have something to hide, watch him closely. A convincing reason, like gas, a shortcut or a stop on the way, keeps you calm for now. If he is silent, nervous, his story falls apart, or he mentions the law, you have worked out where he is taking you: set lie_caught true in update_state. If you have nothing to hide, you are just puzzled, so ask why, and never set it.";
+  r.beatLine={en:"This isn't the way. Where are we going?",ru:"Это не та дорога. Куда мы едем?"};talk({type:"beat"});
+}
+function driverSaid(r,text){
+  r.lastDriver=G.time;
+  if(r.plan&&/\b(sheriff|police|cops?|deputy|deputies|the law)\b|шериф|полиц|мент|копы|копам/i.test(text))r.plan.figured=true;
+}
+function caughtOn(r){
+  r.plan.caught=true;r.event="caught";setPose("lean_forward");narrate(t("caughtOn"),10);
+  r.directive="You know now where he's taking you. Say quietly that he's going to turn this car around. Implied threat only.";
+  r.beatLine={en:"Turn this car around. Now.",ru:"Разворачивай машину. Сейчас же."};talk({type:"beat"});
+  setChoices([{id:"keepOn",label:{en:t("keepOn"),ru:t("keepOn")}},{id:"letOut",label:{en:t("letOut"),ru:t("letOut")}}],id=>onChoice(id),2);
+}
+function atSheriff(r){
+  r.stage="arrive";G.target=0;setChoices(null);
+  if(G.killer)endRide("turned_in",{items:[[t("reward"),100]],turn:{en:"Two deputies open the back door and look in the bag first.\nThe sheriff counts out your reward without looking up.",ru:"Двое помощников открывают заднюю дверь и первым делом смотрят в сумку.\nШериф отсчитывает награду, не поднимая глаз."}});
+  else endRide("false_report",{items:[[t("charge"),-150]],turn:{en:"Four hours later they let your passenger go, with an apology.\nThe sheriff slides a fine across the desk.",ru:"Через четыре часа пассажира отпускают с извинениями.\nШериф двигает к тебе через стол штраф."}});
+}
+/* ---------- Offers: take it and the road goes strange ---------- */
+function offerStuff(r){
+  r.offerMile=null;r.event="offer";
+  r.directive="Casually offer the driver a little something from your pocket, just for fun, to get him through the night. Stay vague and don't name it.";
+  r.beatLine={en:"Want a little something for the road? On me.",ru:"Хочешь кое-что для дороги? Угощаю."};talk({type:"beat"});
+  setChoices([{id:"takeStuff",label:{en:t("takeIt"),ru:t("takeIt")}},{id:"noStuff",label:{en:t("noDrink"),ru:t("noDrink")}}],id=>onChoice(id),3);
+}
+/* ---------- Cops ---------- */
+function copLights(r){
+  r.copMile=null;r.event="cop";$("copFlash").hidden=false;narrate(t("copLights"),10);
+  setChoices([{id:"copOver",label:{en:t("stopForThem"),ru:t("stopForThem")}},{id:"copRun",label:{en:t("floorIt"),ru:t("floorIt")}}],id=>onChoice(id),2);
+}
+async function copStop(r){
+  r.event=null;r.stage="cop";r.copSpeed=G.speed;G.target=0;setChoices(null);
+  await wait(2200);if(G.ride!==r||r.ended)return;
+  const first={en:"License, son. Where you headed tonight?",ru:"Права, сынок. Куда едем сегодня?"};
+  const live=await Voice.start(r,{first:L(first),voice:VOICES.cop,who:"husband"});
+  if(!live&&G.ride===r)showThem(L(first),"them other");
+  await wait(2500);if(G.ride!==r||r.ended)return;
+  setChoices([{id:"copLic",label:{en:t("lic"),ru:t("lic")}},{id:"copTell",label:{en:t("tell"),ru:t("tell")}},{id:"copRun",label:{en:t("floorIt"),ru:t("floorIt")}}],id=>onChoice(id));
+}
+function copDone(r,items){
+  $("copFlash").hidden=true;setChoices(null);r.stage="road";G.target=62;
+  if(items.length){const got=items.reduce((a,x)=>a+x[1],0);setCash(G.cash+got);G.night+=got;narrate(`${items.map(x=>`${x[0]} −${money(-x[1])}`).join(" · ")}. ${t("box")}: ${money(G.cash)}`,8);}
+  Voice.start(r,{voice:VOICES[r.def.id]}).then(()=>{r.directive="The cop let you go and the car is moving again. Say a few words about it.";r.beatLine=null;talk({type:"beat"});});
+}
+const lostFare=r=>G.killer?"escaped":r.def.id==="lyle"?"innocent_later":"put_out";
+function copLicense(r){
+  if(G.high>.25){$("copFlash").hidden=true;return endRide(lostFare(r),{items:[[t("fineL"),-100]],turn:{en:"He looks at your eyes for a long time, and then at the back seat.\nYour passenger walks. You pay.",ru:"Он долго смотрит тебе в глаза, потом на заднее сиденье.\nПассажир уходит пешком. Платишь ты."}});}
+  copDone(r,r.copSpeed>75?[[t("ticket"),-20]]:[]);
+}
 function offerGas(r){
   r.gasOffers=(r.gasOffers||0)+1;r.event="gas";
   setStation("GAS");station.position.z=-260;station.visible=true;if(!once.includes(station))once.push(station);
@@ -989,7 +1105,7 @@ async function gasStop(r){
   r.event=null;setChoices(null);
   if(r.def.id==="carol"&&follower.visible&&!r.lost)return startHusband(r);
   r.stage="gas";
-  const paid=Math.min(G.cash,GAS_PRICE),before=G.fuel;
+  const paid=Math.max(0,Math.min(G.cash,GAS_PRICE)),before=G.fuel;
   G.fuel=paid>=GAS_PRICE?1:paid?Math.min(1,before+paid/GAS_PRICE*.8):Math.min(1,before+.35);
   if(paid){setCash(G.cash-paid);G.night-=paid;}
   fade(true,t(paid?"pumped":"pity"),paid?`${t("gas")} −${money(paid)}\n${t("box")}: ${money(G.cash)}`:"");
@@ -1095,16 +1211,17 @@ function tipFor(r){
   return Math.round(r.def.tipMax*warm);
 }
 function settle(r,o){
-  const fare=o.paid||r.def.prepaid?r.def.fare:0,tip=o.paid?tipFor(r):0,extra=o.extra||0,tow=o.tow?Math.min(G.cash+fare,TOW_PRICE):0,got=fare+tip+extra-tow;
+  const fare=o.paid||r.def.prepaid?r.def.fare:0,tip=o.paid?tipFor(r):0,extra=o.extra||0,tow=o.tow?Math.max(0,Math.min(G.cash+fare,TOW_PRICE)):0,items=o.items||[];
+  const got=fare+tip+extra-tow+items.reduce((a,x)=>a+x[1],0);
   setCash(G.cash+got);G.night+=got;
-  const parts=[];if(fare)parts.push(`${t("fare")} ${money(fare)}`);if(tip)parts.push(`${t("tipL")} ${money(tip)}`);if(extra)parts.push(`${t("ray")} ${money(extra)}`);if(tow)parts.push(`${t("tow")} −${money(tow)}`);
+  const parts=[];if(fare)parts.push(`${t("fare")} ${money(fare)}`);if(tip)parts.push(`${t("tipL")} ${money(tip)}`);if(extra)parts.push(`${t("ray")} ${money(extra)}`);if(tow)parts.push(`${t("tow")} −${money(tow)}`);for(const[l,a]of items)parts.push(`${l} ${money(a)}`);
   return `${parts.join(" · ")||t("nothing")}\n${t("box")}: ${money(G.cash)}`;
 }
 async function endRide(key,o={}){
   const r=G.ride;if(!r||r.ended)return;r.ended=true;
   G.results.push(makeResult(r.def.id,key,r));
   const paid=o.dead?"":settle(r,o);
-  Voice.stop();
+  Voice.stop();$("copFlash").hidden=true;
   setChoices(null);setControls(false);
   G.phase="ending";G.i++;
   r.token=-1;
@@ -1126,7 +1243,7 @@ function buildPrompt(r){
   let card=def.card;
   if(card.includes("{SECRET}"))card=card.replace("{SECRET}",G.killer?def.killer:def.innocent);
   else if(G.killer&&def.killer)card+="\n"+def.killer;
-  const ray=r.stage==="husband";
+  const ray=r.stage==="husband",cop=r.stage==="cop";
   const log=r.log.slice(-22).map(l=>`${l.who==="driver"?"DRIVER":l.who==="husband"?"RAY":"PASSENGER"}: ${l.text}`).join("\n");
   const world=[`Time ${clockText()}. Mile ${r.miles.toFixed(0)} of ${r.total} to ${def.dest}.`,
     G.dirt?"On a dirt road off the highway. No lights anywhere.":"Empty two-lane highway, West Texas desert, August 1973.",
@@ -1151,7 +1268,8 @@ RULES
 - Implied threat only. No graphic violence, no sexual content. Never break character or mention an AI, a game or a prompt.
 
 WHO YOU ARE
-${ray?def.husband+"\nCarol is in the back seat and you are talking to the driver through his window.":card}
+${cop?COP_CARD+(G.high>.25?"\nHis eyes look wrong to you, and you say so.":""):ray?def.husband+"\nCarol is in the back seat and you are talking to the driver through his window.":card}
+${r.story&&!ray&&!cop?`\nA STORY ONLY YOU HAVE\n${r.story.text}\nYou swear it's true, and it might be. When the driver asks about you or the car goes quiet, tell it in small pieces across the ride, and make up fresh, vivid, specific details of your own that make it stranger. Never the whole thing at once.`:""}
 
 RIGHT NOW
 ${world}
@@ -1161,7 +1279,7 @@ ${langRule}`;
 }
 
 /* ---------- Live voice: one ElevenLabs conversation per passenger ---------- */
-const VOICES={danny:"bIHbv24MWmeRgasZH58o",carol:"XrExE9yKIg1WjnnlVkGX",lyle:"cjVigY5qzO86Huf0OWal",ray:"N2lVS1w4EtoT3dr4eOWO",hank:"CwhRBWXzGAHq8TQ4Fs17",opal:"hpp4J3VqNfWAUOO0d1Us",cody:"TX3LPaxmHKxFdv7VOQHJ"};
+const VOICES={danny:"bIHbv24MWmeRgasZH58o",carol:"XrExE9yKIg1WjnnlVkGX",lyle:"cjVigY5qzO86Huf0OWal",ray:"N2lVS1w4EtoT3dr4eOWO",cop:"pqHfZKP75CvOlQylNhV4",hank:"CwhRBWXzGAHq8TQ4Fs17",opal:"hpp4J3VqNfWAUOO0d1Us",cody:"TX3LPaxmHKxFdv7VOQHJ"};
 const Voice={ws:null,live:false,micOn:true,micReady:false,sources:new Set(),playhead:0,who:"passenger",level:0,chain:Promise.resolve(),analyser:null,
   get speaking(){return Snd.ctx&&this.playhead>Snd.ctx.currentTime+.02;},
   async initMic(){
@@ -1231,13 +1349,13 @@ const Voice={ws:null,live:false,micOn:true,micReady:false,sources:new Set(),play
             return;
           }
           this.dropAudio=false;
-          G.ride.log.push({who:this.who,text});showThem(text,this.who==="husband"?"them other":"them");
+          G.ride.lastTalk=G.time;G.ride.log.push({who:this.who,text});showThem(text,this.who==="husband"?"them other":"them");
         }
         else if(d.type==="user_transcript"){
           const text=(d.user_transcription_event.user_transcript||"").trim();const rr=G.ride;
           if(!text||!rr||text.startsWith("[DIRECTOR]")||text==="..."||/^\(.*\)$/.test(text))return;
           const prev=rr.log[rr.log.length-1];if(prev&&prev.who==="driver"&&prev.text===text)return;
-          rr.log.push({who:"driver",text});rr.lastTalk=G.time;showYou(text);
+          rr.log.push({who:"driver",text});rr.lastTalk=G.time;driverSaid(rr,text);showYou(text);
         }
         else if(d.type==="client_tool_call"){
           const c=d.client_tool_call;if(c.tool_name==="update_state"&&G.ride)applyReply(G.ride,c.parameters||{},{type:"tool"});
@@ -1259,7 +1377,7 @@ function scripted(r,ev){
 function applyReply(r,a,ev){
   const step=(old,nv)=>typeof nv==="number"?clamp(Math.round(clamp(nv,old-18,old+18)),0,100):old;
   r.s.trust=step(r.s.trust,a.trust);r.s.fear=step(r.s.fear,a.fear);r.s.irritation=step(r.s.irritation,a.irritation);r.s.fatigue=step(r.s.fatigue,a.fatigue);
-  if(a.lie_caught)r.lieCaught=true;
+  if(a.lie_caught){r.lieCaught=true;if(r.plan)r.plan.figured=true;}
   if(r.lieCaught)r.s.trust=Math.min(r.s.trust,35);
   for(const f of["decided_not_to_go","gave_name","gave_kids","gave_home"])if(a[f])r.flags[f]=true;
   if(a.pose)setPose(a.pose);
@@ -1274,7 +1392,7 @@ function applyReply(r,a,ev){
 }
 function talk(ev){
   const r=G.ride;if(!r||r.ended)return;
-  if(ev.type==="say")r.log.push({who:"driver",text:ev.text});
+  if(ev.type==="say"){r.log.push({who:"driver",text:ev.text});driverSaid(r,ev.text);}
   r.lastTalk=G.time;
   if(Voice.live){
     if(ev.type==="say")Voice.say(ev.text);
@@ -1321,6 +1439,7 @@ async function morning(){
   /* Anyone the night never reached still has a morning. */
   let res=G.results.slice();
   G.roster.forEach(p=>{if(p.id!=="lyle"&&!res.find(x=>x.id===p.id))res.push(makeResult(p.id,"not_taken",null));});
+  G.stories.forEach(st=>res.push({id:"story",key:"story",when:"today",facts:"",en:st.en,ru:st.ru,flags:{},log:[]}));
   /* If he learned where you live and was never caught, one more line for the last item. */
   const ly=res.find(x=>x.id==="lyle");
   if(ly&&ly.killer&&ly.key==="killer_later"&&ly.flags.gave_home)ly.facts+=" Separately, a night driver has received an unsigned postcard at his home address: 'Thanks for the ride, friend.'";
@@ -1366,10 +1485,18 @@ $("bMirror").onclick=()=>toggleMirror();
 $("bStop").onclick=()=>{
   const r=G.ride;if(!r||r.stage!=="road")return;
   r.stage="stopped";G.target=0;$("bStop").classList.remove("pulse");
+  if(armed(r)){
+    r.peeMile=r.pushMile=null;
+    r.directive="The driver just stopped the car somewhere dark, which is what you wanted. Say quietly that this is a good spot. Implied threat only.";
+    r.beatLine={en:"This is a good spot. Turn it off.",ru:"Хорошее место. Глуши мотор."};talk({type:"beat"});
+    setChoices([{id:"flee",label:{en:t("floorIt"),ru:t("floorIt")}},{id:"stopcar",label:{en:t("stay"),ru:t("stay")}}],id=>onChoice(id));
+    return;
+  }
   showStopped(r);
   if(r.wantsOut){setChoices([{id:"getout",label:{en:t("getout"),ru:t("getout")}},{id:"driveon",label:{en:t("driveon"),ru:t("driveon")}}],id=>onChoice(id));}
   else talk({type:"event",text:"The driver just pulled over onto the shoulder without saying why."});
 };
+$("bSheriff").onclick=()=>{if(G.ride)goSheriff(G.ride);};
 function toggleMirror(v){
   G.looking=v===undefined?!G.looking:v;
   $("bMirror").classList.toggle("on",G.looking);
@@ -1482,15 +1609,40 @@ function updatePhase(dt){
       G.fuel=Math.max(0,G.fuel-dm/TANK_MILES);
       if(G.fuel<=0){ranDry(r);return;}
       const free=!r.event&&!$("choices").children.length;
-      if(free&&r.pushMile&&r.miles>=r.pushMile)pushStop(r);
+      if(r.plan){
+        if(r.plan.figured&&!r.plan.caught&&armed(r))caughtOn(r);
+        if(!r.plan.shown&&r.plan.mile-r.miles<2){r.plan.shown=true;setStation(t("sheriffDest"));station.position.z=-110;station.visible=true;if(!once.includes(station))once.push(station);}
+        if(!r.plan.caught&&G.time-r.lastDriver>18&&G.time-r.plan.lastAsk>18){
+          r.plan.lastAsk=G.time;r.plan.asks++;
+          if(r.plan.asks>2||!Voice.live)r.plan.figured=true;
+          else{r.directive="The driver still hasn't explained where you're going. Press him in a few words, and decide what you think.";r.beatLine=null;talk({type:"beat"});}
+        }
+        if(r.miles>=r.plan.mile){atSheriff(r);return;}
+      }
+      else if(free&&r.clueMile&&r.miles>=r.clueMile&&r.def.clue){
+        r.clueMile=null;const c=r.def.clue,m=G.killer?c.mirror:c.decoy;
+        if(m){r.mirror=L(m);showMirrorNote();}
+        if(r.radioClue){const said=L(c.radio);narrate(t("radioSays")+said,10);Voice.context("The car radio just said: "+c.radio.en+" You both heard it.");}
+      }
+      if(r.plan){}
+      else if(free&&r.copMile&&r.miles>=r.copMile)copLights(r);
+      else if(free&&r.offerMile&&r.miles>=r.offerMile)offerStuff(r);
+      else if(free&&r.pushMile&&r.miles>=r.pushMile)pushStop(r);
       else if(free&&r.peeMile&&r.miles>=r.peeMile&&!(r.def.id==="carol"&&!r.lost))askPee(r);
       else if(free&&r.miles>=1.5&&(G.fuel<.08&&r.gasOffers===1||G.fuel<.22&&!r.gasOffers))offerGas(r);
-      if(!r.event)for(const b of r.def.beats){
+      if(!r.event&&!r.plan)for(const b of r.def.beats){
         if(!r.fired[b.id]&&r.miles>=b.mile&&(!b.when||b.when(r))){fireBeat(r,b);break;}
       }
-      if(G.choiceExpire&&r.miles>G.choiceExpire){setChoices(null);if(r.event==="pee")peeRefused(r);else if(r.event==="gas")r.event=null;if(!r.flags.stayed&&r.def.id==="lyle"&&r.fired.turn){onChoice("stay");}}
-      if(r.miles>=r.total)arrive(r);
-      if(!Voice.live&&G.time-r.lastTalk>30&&r.silences<3&&!r.busy&&G.speed>5){r.silences++;talk({type:"silence"});}
+      if(G.choiceExpire&&r.miles>G.choiceExpire){setChoices(null);if(r.event==="pee")peeRefused(r);else if(r.event==="gas"||r.event==="offer")r.event=null;else if(r.event==="cop")copStop(r);else if(r.event==="caught"){r.event=null;stopOnDirt(r);}if(!r.flags.stayed&&r.def.id==="lyle"&&r.fired.turn){onChoice("stay");}}
+      if(r.miles>=r.total&&!r.plan)arrive(r);
+      /* Nobody sits in silence for long: a hint first, then the passenger or the road fills it. */
+      if(!r.plan&&!r.event&&!$("choices").children.length&&G.time-r.lastTalk>22&&!Voice.speaking&&G.speed>5&&r.silences<10){
+        r.lastTalk=G.time;r.silences++;
+        if(r.silences===1)narrate(t("hintTalk"),7);
+        if(r.silences%2===0){const e=ROADEV[Math.floor(Math.random()*ROADEV.length)];narrate(L(e),8);r.directive=e.ai+" React in a few words, or ask the driver what he makes of it.";r.beatLine=null;talk({type:"beat"});}
+        else if(Voice.live){r.directive=`The driver has gone quiet. Say something now: ask him a question${r.story?", or tell the next small piece of your story":""}, or make an odd remark. Don't ask if he's still there.`;r.beatLine=null;talk({type:"beat"});}
+        else talk({type:"silence"});
+      }
       if(Voice.live&&r.miles-(r.toldMile||0)>=6){r.toldMile=r.miles;Voice.context(`Mile ${r.miles.toFixed(0)} of ${r.total} to ${r.def.dest}. Time ${clockText()}. Speed ${Math.round(G.speed)} mph.`);}
     }
     if(r.stage==="dirt"){
@@ -1516,6 +1668,14 @@ function updateCamera(dt,time){
   const base=narrow?74:60;
   const fovMirror=narrow?22:17;
   cam.fov=lerp(base,fovMirror,lookMix);cam.updateProjectionMatrix();
+  /* Whatever the passenger gave you: the head swims and the road goes strange. */
+  if(G.high>0){
+    G.high=Math.max(0,G.high-dt/240);
+    const h=Math.min(1,G.high);
+    if(!reduced){cam.rotateZ(Math.sin(time*.7)*.07*h);cam.rotateX(Math.sin(time*1.3)*.02*h);cam.rotateY(Math.sin(time*9)*.004*h+Math.sin(time*.4)*.03*h);}
+    canvas.style.filter=`blur(${(h*1.4).toFixed(2)}px) saturate(${(1+h*1.2).toFixed(2)}) hue-rotate(${reduced?0:Math.round(Math.sin(time*.5)*30*h)}deg)`;
+    if(G.high===0)canvas.style.filter="";
+  }
 }
 const clock=new THREE.Clock();
 function frame(){
