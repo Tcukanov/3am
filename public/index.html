@@ -1,0 +1,1282 @@
+<meta charset="utf-8">
+<title>Last Ride 3AM</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600&family=Old+Standard+TT:wght@400;700&family=PT+Mono&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Layout: the windshield fills the screen; controls sit low like labelled dash switches. */
+:root{
+  --night:#05070d; --ink:#e9e2cf; --dim:#8d8a7d;
+  --amber:#e8a33d; --tape:#14131a; --tape-ink:#f1eee4; --hot:#a82a1e;
+  --sign:#0e5a3c; --paper:#d8cfb6; --paper-ink:#1d1a14; --paper-rule:#3a3428;
+  --display:"Oswald","Arial Narrow",Impact,sans-serif;
+  --mono:"PT Mono","Courier New",monospace;
+  --serif:"PT Serif",Georgia,serif;
+  --news:"Old Standard TT","Times New Roman",serif;
+  color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0;background:var(--night);color:var(--ink);overflow:hidden}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:default}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+/* Embossed label-maker tape: the driver labelled his own switches. */
+.tape{font-family:var(--mono);font-weight:400;text-transform:uppercase;letter-spacing:.14em;font-size:12px;
+  background:var(--tape);color:var(--tape-ink);padding:7px 11px;border-radius:2px;
+  box-shadow:inset 0 1px 0 #34323d,inset 0 -1px 0 #000,0 2px 5px #000a;
+  text-shadow:0 1px 0 #000;white-space:nowrap}
+button.tape:hover{background:#25232d}
+button.tape:active{transform:translateY(1px)}
+button.tape:disabled{opacity:.35;cursor:default}
+button.tape.on{color:var(--amber)}
+button.tape.red{background:var(--hot)}
+button.tape.red:hover{background:#c23526}
+button.tape.pulse{animation:pulse 1.3s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:inset 0 1px 0 #34323d,0 0 16px var(--amber)}}
+
+#hud{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none;
+  padding-block:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#hud>*{pointer-events:auto}
+#top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;pointer-events:none}
+#status{display:flex;gap:6px;flex-wrap:wrap;pointer-events:none}
+#status .tape{font-variant-numeric:tabular-nums}
+#mode{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:right;max-width:44ch}
+
+#low{display:flex;flex-direction:column;gap:10px;align-items:center;width:100%;pointer-events:none}
+#subs{max-width:64ch;width:100%;text-align:center;font-family:var(--serif);min-height:4.2em;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;pointer-events:none}
+#subs .you{color:var(--dim);font-size:14px}
+#subs .them{font-size:clamp(18px,2.4vw,23px);line-height:1.3;text-shadow:0 1px 3px #000,0 0 14px #000}
+#subs .them.other{color:#f0c98a}
+#subs .nar{font-style:italic;color:#c8c2ad;font-size:clamp(15px,1.9vw,18px);line-height:1.4;text-shadow:0 1px 3px #000,0 0 12px #000}
+#subs .quiet{color:var(--dim);font-style:italic;font-size:15px}
+#choices{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;pointer-events:auto}
+#choices .tape{font-size:13px;padding:10px 14px;background:#2b1a07;color:var(--amber);box-shadow:inset 0 1px 0 #5a3a12,0 0 14px #e8a33d44}
+#choices .tape:hover{background:#3d2509}
+#talk{display:flex;gap:8px;width:min(720px,100%);pointer-events:auto}
+#say{flex:1;min-width:0;background:#0b0c12e6;border:1px solid #2c2b33;border-radius:2px;color:var(--ink);font-family:var(--serif);font-size:16px;padding:10px 12px}
+#say::placeholder{color:#74716a}
+#say:disabled{opacity:.45}
+#dash{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;pointer-events:auto}
+#hud[data-mode="off"] #low,#hud[data-mode="off"] #top{visibility:hidden}
+#talk[hidden],#dash[hidden]{display:none}
+
+#mirrorNote{position:fixed;left:50%;top:62%;transform:translateX(-50%);font-family:var(--mono);font-size:14px;color:#d8d2bd;background:#000a;padding:6px 12px;max-width:min(60ch,90vw);text-align:center;pointer-events:none;opacity:0;transition:opacity .4s}
+#mirrorNote.show{opacity:1}
+
+#fade{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .6s;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;box-sizing:border-box}
+#fade.solid{opacity:1;pointer-events:auto}
+#card{font-family:var(--display);letter-spacing:.06em;font-size:clamp(20px,3.4vw,34px);color:var(--ink);text-transform:uppercase;white-space:pre-line;line-height:1.35}
+#card small{display:block;font-family:var(--serif);text-transform:none;letter-spacing:0;font-size:clamp(15px,1.8vw,18px);color:var(--dim);margin-top:12px;font-style:italic;white-space:pre-line}
+
+#title{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;overflow:auto;
+  padding-block:24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:radial-gradient(ellipse at 50% 42%,#0000 20%,#000c 90%)}
+.hwy{background:var(--sign);color:#f5f3ea;border-radius:12px;padding:6px;box-shadow:0 0 60px #cfe8d622,0 8px 24px #000}
+.hwy>div{border:3px solid #f5f3ea;border-radius:8px;padding:14px clamp(20px,5vw,52px) 16px}
+.hwy h1{font-family:var(--display);font-weight:600;font-size:clamp(38px,8.5vw,92px);letter-spacing:.03em;margin:0;line-height:1;text-wrap:balance}
+.hwy p{font-family:var(--display);font-size:clamp(15px,2.2vw,22px);margin:8px 0 0;letter-spacing:.08em;display:flex;justify-content:space-between;gap:24px}
+#pitch{font-family:var(--serif);max-width:52ch;font-size:clamp(15px,1.9vw,18px);line-height:1.5;margin:0;text-shadow:0 1px 4px #000;text-wrap:balance}
+#titleBtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+#go{font-size:15px;padding:12px 22px}
+#codeWrap{font-family:var(--mono);font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+#code{background:#0b0c12e6;border:1px solid #2c2b33;border-radius:2px;color:var(--ink);font-family:var(--mono);font-size:16px;padding:8px 10px;width:min(240px,70vw)}
+#codeErr{font-family:var(--mono);font-size:13px;color:#ff9a7a;margin:0}
+#fine{font-family:var(--mono);font-size:11px;color:var(--dim);max-width:62ch;line-height:1.5;margin:0}
+
+#paper{position:fixed;inset:0;overflow:auto;background:#000;display:flex;justify-content:center;padding-block:24px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+#sheet{background:var(--paper);color:var(--paper-ink);width:min(860px,100%);padding:clamp(16px,3vw,34px);box-shadow:0 0 50px #000;align-self:flex-start;font-family:var(--news);box-sizing:border-box;
+  background-image:repeating-linear-gradient(0deg,#0000 0 3px,#00000006 3px 4px)}
+#mast{text-align:center;border-bottom:3px double var(--paper-rule);padding-bottom:8px}
+#mast h2{font-size:clamp(32px,7vw,62px);margin:0;font-weight:700;line-height:1.05}
+#mast div{display:flex;justify-content:space-between;gap:12px;font-size:13px;border-top:1px solid var(--paper-rule);margin-top:8px;padding-top:4px;flex-wrap:wrap}
+#items{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 22px;margin-top:14px}
+.item{min-width:0;border-bottom:1px solid var(--paper-rule);padding-block:10px}
+.item .when{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#6b1d12;margin-bottom:5px}
+.item h3{font-size:clamp(20px,2.6vw,25px);line-height:1.12;margin:0 0 6px;font-weight:700;text-wrap:balance}
+.item p{margin:0;font-size:16px;line-height:1.38;font-family:var(--serif)}
+.item.late{grid-column:1/-1;background:#00000010;padding-inline:12px}
+#paperWait{font-family:var(--serif);font-style:italic;text-align:center;padding:50px 0;font-size:18px}
+#ads{font-size:13px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;border-top:3px double var(--paper-rule);margin-top:12px;padding-top:7px}
+#fict{font-family:var(--mono);font-size:11px;line-height:1.5;margin:12px 0 0;color:#4a4436}
+#again{margin-top:14px;display:flex;justify-content:center}
+@media (prefers-reduced-motion:reduce){button.tape.pulse{animation:none}}
+</style>
+
+<canvas id="gl" aria-label="View through the windshield of a car at night, with the rear-view mirror at the top"></canvas>
+
+<div id="hud" data-mode="off">
+  <div id="top">
+    <div id="status"><span class="tape" id="clock"></span><span class="tape" id="dest"></span><span class="tape" id="mph"></span></div>
+    <div id="mode"></div>
+  </div>
+  <div id="low">
+    <div id="subs" aria-live="polite"></div>
+    <div id="choices"></div>
+    <form id="talk" hidden>
+      <input id="say" autocomplete="off" maxlength="160">
+      <button class="tape" id="send" type="submit"></button>
+    </form>
+    <div id="dash" hidden>
+      <button class="tape" id="bSilent" type="button"></button>
+      <button class="tape" id="bRadio" type="button"></button>
+      <button class="tape" id="bSlow" type="button"></button>
+      <button class="tape" id="bFast" type="button"></button>
+      <button class="tape" id="bMirror" type="button"></button>
+      <button class="tape" id="bStop" type="button"></button>
+      <button class="tape" id="bSound" type="button"></button>
+    </div>
+  </div>
+</div>
+<div id="mirrorNote"></div>
+<div id="fade"><div id="card"></div></div>
+
+<div id="title">
+  <div class="hwy"><div><h1>LAST RIDE 3AM</h1><p><span>ODESSA 40</span><span>LUBBOCK 137</span></p></div></div>
+  <p id="pitch"></p>
+  <div id="titleBtns">
+    <button class="tape" id="lEn" type="button">English</button>
+    <button class="tape" id="lRu" type="button">Русский</button>
+    <button class="tape red" id="go" type="button"></button>
+  </div>
+  <label id="codeWrap" hidden><span id="codeLabel"></span> <input id="code" autocomplete="off" spellcheck="false"></label>
+  <p id="codeErr" role="alert" hidden></p>
+  <p id="fine"></p>
+</div>
+
+<div id="paper" hidden>
+  <div id="sheet">
+    <div id="mast"><h2>The Trans-Pecos Courier</h2><div><span>Vol. LXI, No. 196</span><span id="pDate"></span><span id="pPrice"></span></div></div>
+    <div id="paperWait"></div>
+    <div id="items"></div>
+    <div id="ads"><span id="ad1"></span><span id="ad2"></span><span id="ad3"></span></div>
+    <p id="fict"></p>
+    <div id="again"><button class="tape red" id="againB" type="button"></button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const rand=(a,b)=>a+Math.random()*(b-a);
+const reduced=matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+/* ---------- Strings ---------- */
+const STR={
+ en:{pitch:"West Texas, August 1973. One shift, three strangers, forty miles of dark between towns. No phones. Just the mirror, the radio and whatever you say next.",
+  go:"Start the shift",code:"Play code",badcode:"That play code is wrong.",fine:"Talk out loud. Your browser will ask for the microphone, and passengers answer in their own voices. Headphones work best. All names and places are invented.",
+  ph:"Talk out loud, or type here…",send:"Say",silent:"Mic",radio:"Radio",slow:"Slower",fast:"Faster",mirror:"Mirror",stop:"Pull over",sound:"Sound",
+  pickup:"Pull over",drivepast:"Keep driving",stepout:"Step out a minute",getout:"Ask them to get out",driveon:"Drive on",mi:"mi",mph:"mph",
+  tip:"Click the mirror or press Tab to look. Faces are easy to miss from here.",
+  quiet:"Says nothing.",waiting:"…",scripted:"Voice is unavailable, so passengers use written lines. Try reloading the page.",nomic:"The microphone is off. Type instead, and passengers will still answer aloud.",limit:"Claude usage limit reached. Scripted lines for now.",hiccup:"Connection hiccup. That reply was scripted.",
+  paperWait:"The paperboy is late.",again:"Drive another night",date:"Thursday, August 16, 1973",price:"Ten Cents",
+  ad1:"HOT COFFEE 10¢ · Dot's, Hwy 80",ad2:"RETREADS $9 · Pecos Tire Co.",ad3:"KOZA RADIO · when you can get it",
+  fict:"Fiction. The hitchhiking years of the early 1970s were real and many people did not arrive. Every name, place and event on this page is invented.",
+  late:"Three weeks later",year:"A year later",week:"A week later",today:"This morning",passed:"You left them on the shoulder.",
+  stoppedTip:"The engine ticks."},
+ ru:{pitch:"Западный Техас, август 1973-го. Одна смена, трое незнакомцев, сорок миль темноты между городками. Ни телефонов. Только зеркало, радио и то, что ты скажешь дальше.",
+  go:"Начать смену",code:"Код игры",badcode:"Неверный код игры.",fine:"Говорите вслух. Браузер попросит доступ к микрофону, пассажиры отвечают своими голосами. Лучше в наушниках. Все имена и места вымышлены.",
+  ph:"Говорите вслух или пишите сюда…",send:"Сказать",silent:"Микрофон",radio:"Радио",slow:"Медленнее",fast:"Быстрее",mirror:"Зеркало",stop:"Остановиться",sound:"Звук",
+  pickup:"Остановиться",drivepast:"Ехать дальше",stepout:"Выйти на минуту",getout:"Попросить выйти",driveon:"Ехать дальше",mi:"миль",mph:"миль/ч",
+  tip:"Нажмите на зеркало или Tab, чтобы посмотреть. Отсюда лицо легко пропустить.",
+  quiet:"Молчит.",waiting:"…",scripted:"Голос недоступен, пассажиры говорят заготовленными репликами. Попробуйте перезагрузить страницу.",nomic:"Микрофон выключен. Пишите текстом, пассажиры всё равно ответят голосом.",limit:"Лимит Claude исчерпан. Пока заготовленные реплики.",hiccup:"Сбой связи. Этот ответ заготовлен заранее.",
+  paperWait:"Разносчик газет опаздывает.",again:"Ещё одна ночь",date:"Четверг, 16 августа 1973",price:"Десять центов",
+  ad1:"ГОРЯЧИЙ КОФЕ 10¢ · У Дот, шоссе 80",ad2:"ВОССТАНОВЛЕННЫЕ ШИНЫ $9 · Pecos Tire Co.",ad3:"РАДИО KOZA · когда ловит",
+  fict:"Вымысел. Годы автостопа начала 1970-х были настоящими, и многие не доехали. Все имена, места и события на этой странице вымышлены.",
+  late:"Три недели спустя",year:"Через год",week:"Через неделю",today:"Сегодня утром",passed:"Ты оставил его на обочине.",
+  stoppedTip:"Мотор тикает, остывая."}
+};
+const t=k=>STR[G.lang][k];
+const L=o=>typeof o==="string"?o:o[G.lang];
+
+/* ---------- Passengers: authored skeleton, AI walks between the beats ---------- */
+const PASSENGERS=[
+{ id:"danny",look:"danny",clock:[23,40],place:{en:"11:40 PM\nPecos",ru:"23:40\nПекос"},dest:"Odessa",total:30,station:"GAS",
+  approach:{en:"A kid in the light of the last pump. Duffel at his feet. Thumb out, hopeful.",ru:"Парень в свете последней колонки. Вещмешок у ног. Рука поднята, с надеждой."},
+  opener:{en:"Bus depot in Odessa, sir, if you're headed that way.",ru:"До автобусной в Одессе, сэр, если вам по пути."},
+  pay:{good:{en:"He presses two dollars on you and shakes your hand too long.",ru:"Он суёт тебе два доллара и слишком долго жмёт руку."},bad:{en:"He leaves a dollar on the seat without looking at you.",ru:"Он оставляет доллар на сиденье, не глядя на тебя."}},
+  card:`Danny Reece, 19, from Pecos. Skinny, polite, says "sir". Got caught joyriding in May; the judge gave him a choice of the Army or county jail, and he signed. Report to Fort Hood tomorrow by noon.
+SECRET: he has not slept in two days, and he has been thinking about running to Mexico. He is scared of being a coward more than of dying. His mother believes he volunteered.
+GOAL: he wants someone older to tell him what to do, without having to ask straight out. He tests the driver with questions.
+FEAR: being laughed at; being turned in.
+SPEECH: short, respectful, unfinished sentences. Changes the subject with baseball when cornered. If he catches the driver lying about the service (for example, wrong detail about basic training), he goes polite and shut.
+Set decided_not_to_go=true only if the driver has clearly talked him out of reporting and he has accepted it.`,
+  beats:[
+   {id:"served",mile:2.5,directive:"Ask the driver if he served. Casual, but you care about the answer.",line:{en:"You ever serve, sir?",ru:"Вы служили, сэр?"}},
+   {id:"mom",mile:11,when:r=>r.s.trust>=45,directive:"Let slip one small true thing: your mother packed you sandwiches like it's summer camp, and she told the whole church you volunteered.",line:{en:"Mom told the whole church I volunteered.",ru:"Мама всей церкви сказала, что я доброволец."}},
+   {id:"border",mile:19,sign:["PRESIDIO  100","MEXICO BORDER"],directive:"You see the sign for the road south. Say quietly: what if I didn't go? It's a hundred miles to the border.",line:{en:"What if I didn't go? Hundred miles to the border.",ru:"А если я не поеду? Сто миль до границы."},
+    choices:[{id:"south",label:{en:"Turn south",ru:"Свернуть на юг"}}],window:4}
+  ],
+  lines:{en:["Yes sir.","Rangers are something this year.","You drive this every night?","Sorry. Talking too much.","Guess so.","I don't know, sir.","It's real dark out here."],ru:["Да, сэр.","«Рейнджерс» в этом году что-то.","Вы тут каждую ночь ездите?","Простите. Заболтался.","Наверное.","Не знаю, сэр.","Темно тут совсем."]}
+},
+{ id:"carol",look:"carol",clock:[1,22],place:{en:"1:22 AM\nEmpty highway",ru:"1:22 ночи\nПустое шоссе"},dest:"Lubbock",total:36,
+  approach:{en:"A woman on the shoulder, miles from anything. Suitcase. Winter coat buttoned up, in August.",ru:"Женщина на обочине, вокруг ничего на много миль. Чемодан. Зимнее пальто застёгнуто наглухо, в августе."},
+  opener:{en:"Lubbock. Here, I'll pay now. Please just go.",ru:"Лаббок. Вот, плачу сразу. Поезжайте, пожалуйста."},
+  pay:{good:{en:"She folds the last of her bills into your shirt pocket and doesn't say why.",ru:"Она вкладывает последние купюры в карман твоей рубашки и не говорит зачем."},bad:{en:"She paid up front. She doesn't look back.",ru:"Она заплатила заранее. Не оглядывается."}},
+  card:`Carol Dunn, 35, from a ranch outside Toyah. Dry, watchful, smokes. Long coat in the heat because it covers bruises on her arms. Suitcase holds everything she decided to keep. Going to her sister in Lubbock.
+SECRET: she left her husband Ray an hour ago while he slept, and took $212 from the coffee can. He wakes easily.
+GOAL: reach Lubbock without anyone remembering her. Keep the driver moving. Never say his name unless she trusts the driver.
+FEAR: the white Ford pickup. Being handed back. Being pitied.
+SPEECH: clipped, dry humor, answers questions with questions. If asked directly who is behind them, she says "my husband" and nothing more.`,
+  beats:[
+   {id:"lights",mile:6,follow:true,directive:"Headlights have been behind you for a while. You just noticed. Try not to show it, and ask the driver to go a little faster.",line:{en:"Could you go a little faster?",ru:"Можно чуть быстрее?"}},
+   {id:"station",mile:20,station:"GAS",directive:"A lit gas station is coming up. You don't want to stop there, and you say so, or you say nothing and watch the mirror.",line:{en:"Don't stop. Please.",ru:"Не останавливайтесь. Пожалуйста."},
+    choices:[{id:"pullin",label:{en:"Pull into the station",ru:"Заехать на заправку"}}],window:3,when:r=>!r.lost}
+  ],
+  lines:{en:["Mm.","You always this curious?","Keep your eyes on the road.","Long way yet?","You got a light?","Nobody you'd know.","That so."],ru:["Мм.","Ты всегда такой любопытный?","Смотри на дорогу.","Далеко ещё?","Огонька не найдётся?","Ты его не знаешь.","Вот как."]},
+  husband:`Ray Dunn, 41, is now at the driver's window with one hand on the roof. Friendly in the voice, not the eyes. "Evening. That's my wife you got there." He speaks to the driver man to man. Says she's sick, says she gets confused. Never raises his voice.`
+},
+{ id:"lyle",look:"lyle",clock:[3,0],place:{en:"3:00 AM\nDot's Diner\nLast ride",ru:"3:00 ночи\nДайнер Дот\nПоследняя поездка"},dest:"Midland",total:30,station:"EAT",
+  approach:{en:"A man in a good grey suit outside the diner, at three in the morning. He raises one finger, as if for a waiter.",ru:"Мужчина в хорошем сером костюме у дайнера, в три часа ночи. Поднимает палец, как официанту."},
+  opener:{en:"Midland, friend. I'll make it worth your while.",ru:"До Мидленда, друг. Не обижу."},
+  pay:{good:{en:"He pays double, in clean bills, and tells you to get some sleep.",ru:"Он платит вдвое, чистыми купюрами, и советует выспаться."},bad:{en:"He pays exactly and thanks you by the name you gave him.",ru:"Он платит ровно и благодарит, называя тебя по имени, которое ты дал."}},
+  card:`Walter Lyle, about 50. Grey suit, clean hands, very good manners, pays well, smiles easily. Says he sells irrigation pumps.
+{SECRET}
+GOAL: learn the driver's name, whether he has children, where he lives, how often he drives this road, and who would miss him. Ask as friendly small talk, one thing at a time, never two questions in a row. Remember answers and use them later, warmly.
+SPEECH: unhurried, courteous, a little old-fashioned. Calls the driver "friend" until he has a name. Your style must be exactly that of a kind, lonely man. The danger is in what you ask, never how you ask it.
+Set gave_name / gave_kids / gave_home to true when the driver actually discloses those facts.`,
+  killer:`SECRET: there is no pump business. You have hurt people on this road before and you intend to get the driver onto the dirt road by the old cattle guard, where there is nothing. State numbers run inverted for you: the more the driver trusts you the calmer you are. Your "fear" stays low. If the driver gets suspicious, you stay pleasant and say you mixed up the exit. Never threaten in words before the car is stopped on the dirt road, and never describe violence.`,
+  innocent:`SECRET: there is no pump business anymore. You were laid off and your wife died in March. You live alone in a falling-down house on a dirt road the county forgot, by the old cattle guard. You ask questions because nobody has talked to you in weeks and you want to hear about someone's family. You are slightly ashamed of this and would never say it.`,
+  beats:[
+   {id:"name",mile:2.5,directive:"Ask the driver's name, warmly.",line:{en:"What do they call you, friend?",ru:"Как тебя звать, друг?"}},
+   {id:"kids",mile:8,directive:"Ask if he has kids at home.",line:{en:"Got children at home?",ru:"Дети дома есть?"}},
+   {id:"road",mile:14,directive:"Ask how often he drives this road, and where he lives.",line:{en:"You run this road every night? Where's home?",ru:"Каждую ночь тут ездишь? А живёшь где?"}},
+   {id:"turn",mile:20,side:true,sign:["CATTLE GUARD","NO SERVICES"],directive:"The dirt turnoff is coming up. Tell him, mildly, to take it: that's your place, just down there. The driver knows this road and has never seen a house there.",line:{en:"Take this next turn. That's my place down there.",ru:"Сверни на следующем. Там мой дом."},
+    choices:[{id:"dirt",label:{en:"Take the dirt road",ru:"Свернуть на грунтовку"}},{id:"stay",label:{en:"Stay on the highway",ru:"Остаться на шоссе"}}],window:2.2}
+  ],
+  lines:{en:["Is that right.","Good to hear a voice.","Family's the thing, friend.","You've got a careful way about you.","Long night.","I do appreciate this.","Mm. Go on."],ru:["Вот как.","Приятно слышать голос.","Семья — это главное, друг.","Ты человек осторожный.","Долгая ночь.","Очень тебе признателен.","Мм. Продолжай."]}
+}];
+
+/* Morning paper: the facts are authored and fixed; the model only sets them in type. */
+const OUT={
+ danny:{
+  not_taken:{when:"today",facts:"Pvt. Daniel Reece, 19, of Pecos failed to report to Fort Hood on Wednesday. Deputies found him asleep on a bench at the Pecos depot and returned him to Army custody.",en:["Pecos Youth Fails to Report","Pvt. Daniel Reece, 19, was found asleep on a depot bench in Pecos and returned to Army custody. His mother told deputies there had been a mistake."],ru:["Юноша из Пекоса не явился в часть","Рядового Дэниела Риса, 19 лет, нашли спящим на скамье автостанции в Пекосе и передали армии. Мать сказала помощникам шерифа, что произошла ошибка."]},
+  calm:{when:"year",facts:"A year on: Sgt. Daniel Reece came home to Pecos on leave from Fort Hood, in good health. He has told his mother the truth about how he enlisted.",en:["Sgt. Reece Home on Leave","Sgt. Daniel Reece is home in Pecos on leave. Friends say he has filled out. He has told his mother how he came to enlist. She has told the church."],ru:["Сержант Рис в отпуске дома","Сержант Дэниел Рис приехал в отпуск в Пекос. Друзья говорят, окреп. Матери он рассказал, как попал в армию. Она рассказала церкви."]},
+  broken:{when:"year",facts:"A year on: Western Union delivered a telegram to the Reece home in Pecos. Pvt. Daniel Reece, 20, died in a training accident at a range in Germany.",en:["Pecos Soldier Dies in Germany","A telegram reached the Reece home on Tuesday. Pvt. Daniel Reece, 20, died in a range accident in Germany. Services Saturday."],ru:["Солдат из Пекоса погиб в Германии","Во вторник в дом Рисов пришла телеграмма. Рядовой Дэниел Рис, 20 лет, погиб на полигоне в Германии. Отпевание в субботу."]},
+  detained:{when:"week",facts:"Daniel Reece, 19, listed absent from Fort Hood, was detained in El Paso at the Santa Fe bridge without papers.",en:["Absentee Held at El Paso","Daniel Reece, 19, was stopped at the Santa Fe bridge without papers and handed to military police."],ru:["Беглеца задержали в Эль-Пасо","Дэниела Риса, 19 лет, остановили на мосту Санта-Фе без документов и передали военной полиции."]},
+  gone:{when:"year",facts:"A year on: the Army still lists Daniel Reece as absent. His mother keeps his room. A postcard from Chihuahua, unsigned, arrived for a night driver care of Dot's Diner.",en:["Postcard at Dot's","The Army still lists Daniel Reece as absent. At Dot's Diner a postcard from Chihuahua is pinned over the register, addressed to 'the night driver'. It is not signed."],ru:["Открытка у Дот","Армия всё ещё числит Дэниела Риса в самовольной отлучке. В дайнере Дот над кассой приколота открытка из Чиуауа «ночному водителю». Без подписи."]},
+  stayed:{when:"week",facts:"Daniel Reece, 19, who had not reported to Fort Hood, died of a knife wound after an argument at a bar in Odessa. No charges yet.",en:["Youth Dies After Bar Dispute","Daniel Reece, 19, of Pecos, died of a knife wound after an argument at an Odessa bar. Fort Hood had listed him as absent."],ru:["Юноша погиб после ссоры в баре","Дэниел Рис, 19 лет, из Пекоса, умер от ножевого ранения после ссоры в баре в Одессе. В Форт-Худе он числился в отлучке."]},
+  put_out:{when:"today",facts:"A highway patrolman picked up Daniel Reece, 19, walking the shoulder east of Pecos at dawn, and drove him to the Odessa depot. He made the noon bus.",en:["Trooper Gives Soldier a Lift","A patrolman found Daniel Reece, 19, walking the shoulder at dawn and drove him to the depot. He made the noon bus."],ru:["Патрульный подвёз солдата","Патрульный нашёл Дэниела Риса, 19 лет, на обочине на рассвете и довёз до автостанции. На полуденный автобус он успел."]}
+ },
+ carol:{
+  not_taken:{when:"today",facts:"A suitcase was found open on the shoulder of the highway north of Toyah. Carol Dunn, 35, has been reported missing by her sister in Lubbock.",en:["Suitcase Found; Toyah Woman Missing","A suitcase was found open on the highway shoulder. Mrs. Carol Dunn, 35, was reported missing by a sister in Lubbock. Her husband is assisting deputies."],ru:["Найден чемодан; жительница Тойи пропала","На обочине нашли раскрытый чемодан. О пропаже Кэрол Данн, 35 лет, заявила сестра из Лаббока. Муж помогает помощникам шерифа."]},
+  free:{when:"today",facts:"A sister in Lubbock reports Carol Dunn, 35, formerly of Toyah, has arrived safely and started work at a laundry on 34th Street. Ray Dunn has made no report.",en:["Personals: Lubbock","Mrs. Carol Dunn, late of Toyah, is visiting with her sister on 34th Street and has taken a position at the laundry there."],ru:["Частные объявления: Лаббок","Миссис Кэрол Данн, прежде из Тойи, гостит у сестры на 34-й улице и устроилась там в прачечную."]},
+  followed:{when:"today",facts:"Lubbock police were called at dawn to a disturbance on 34th Street. A Toyah man, Ray Dunn, was asked to leave. No charges were filed. The women in the house declined to speak.",en:["Disturbance on 34th Street","Police were called at dawn. A Toyah man, Ray Dunn, was asked to leave. No charges were filed."],ru:["Беспорядки на 34-й улице","На рассвете вызвали полицию. Рэя Данна из Тойи попросили уйти. Обвинений не предъявлено."]},
+  handed:{when:"week",facts:"Mrs. Carol Dunn, 35, of Toyah is in serious condition at Reeves County Hospital. Her husband told deputies she fell on the stairs. The Dunn house has one storey.",en:["Toyah Woman Hurt in Fall","Mrs. Carol Dunn, 35, is in serious condition at the county hospital. Her husband told deputies she fell on the stairs. The Dunn home has one storey."],ru:["Жительница Тойи пострадала при падении","Кэрол Данн, 35 лет, в тяжёлом состоянии в окружной больнице. Муж сказал, что она упала с лестницы. Дом Даннов одноэтажный."]},
+  drove_off:{when:"today",facts:"A white Ford pickup was found in a bar ditch north of the highway station. Driver Ray Dunn, 41, of Toyah, was held for drunk driving. His wife was not with him, and arrived at her sister's in Lubbock.",en:["Toyah Man Held After Ditch Wreck","Ray Dunn, 41, was held for drunk driving after his pickup left the road. He told the trooper he was looking for his wife. She is with her sister in Lubbock."],ru:["Задержан после аварии","Рэй Данн, 41 год, задержан за вождение в нетрезвом виде: пикап слетел в кювет. Патрульному он сказал, что ищет жену. Она у сестры в Лаббоке."]},
+  put_out:{when:"today",facts:"A long-haul trucker told deputies he gave a ride at dawn to a woman in a winter coat, and let her off in Post. Nobody has seen her since. No report has been filed.",en:["Trucker Reports Woman in Winter Coat","A trucker says he gave a lift at dawn to a woman in a winter coat and let her off in Post. No one has been reported missing."],ru:["Дальнобойщик и женщина в пальто","Дальнобойщик говорит, что на рассвете подвёз женщину в зимнем пальто и высадил в Посте. Заявлений о пропаже нет."]}
+ },
+ lyle:{
+  killer_later:{when:"late",facts:"Three weeks later: an Abilene trucker was found dead in his cab near Midland, wallet gone. A waitress recalled he left a diner with a polite man in a grey suit who tipped well. There is no irrigation pump salesman named Lyle.",en:["Trucker Found Dead Near Midland","An Abilene trucker was found in his cab, wallet gone. A waitress recalls a polite man in a grey suit who tipped well. Nobody by the name he gave sells pumps in this county."],ru:["У Мидленда найден мёртвым дальнобойщик","Дальнобойщика из Абилина нашли в кабине, бумажника нет. Официантка помнит вежливого мужчину в сером костюме с хорошими чаевыми. Никто с таким именем насосов в округе не продаёт."]},
+  innocent_later:{when:"late",facts:"Three weeks later: Walter Lyle, 52, a retired pump salesman and widower, was found at home on a county road off the highway. Natural causes. No survivors. His telephone had been disconnected in April.",en:["W. Lyle, 52","Walter Lyle, 52, retired, was found at his home on a county road. Natural causes. Mrs. Lyle died in March. No survivors."],ru:["У. Лайл, 52 года","Уолтера Лайла, 52 года, на пенсии, нашли дома на окружной дороге. Естественные причины. Миссис Лайл умерла в марте. Родственников нет."]},
+  real_house:{when:"late",facts:"Three weeks later: a letter to the editor from Walter Lyle, 52, thanks an unnamed night driver who took him home and stayed to hear about his late wife. He encloses a dollar for the paper's fund.",en:["Letter to the Editor","Sir: A night driver took me all the way home down a bad road last month and asked after my wife. I do not know his name. Enclosed, one dollar for the fund. W. Lyle."],ru:["Письмо в редакцию","Сэр: в прошлом месяце ночной водитель довёз меня до самого дома по плохой дороге и спросил о моей жене. Имени его не знаю. Прилагаю доллар в фонд. У. Лайл."]},
+  driver_dead:{when:"today",facts:"A rancher found a night driver dead beside his car on a dirt road off the highway at the old cattle guard. Wallet missing. The back door was open. Sheriff asks anyone who saw the car on Wednesday night to come forward.",en:["Driver Found on County Road","A rancher found a night driver beside his car at the old cattle guard. Wallet missing, back door open. The sheriff asks anyone who saw the car Wednesday night to come forward."],ru:["Водитель найден на окружной дороге","Ранчеро нашёл ночного водителя рядом с машиной у старой решётки для скота. Бумажника нет, задняя дверь открыта. Шериф просит свидетелей откликнуться."]},
+  escaped:{when:"today",facts:"A night driver reported to deputies that he left a passenger on a dirt road off the highway. Deputies drove the road at noon. They found a cattle guard and no house. The report was filed without action.",en:["Report Filed Without Action","A night driver reported leaving a passenger on a dirt road. Deputies drove it at noon and found a cattle guard and no house. No action taken."],ru:["Заявление без последствий","Ночной водитель заявил, что оставил пассажира на грунтовке. Днём помощники шерифа проехали по ней: решётка для скота, домов нет. Никаких действий."]}
+ }
+};
+
+/* ---------- Game state ---------- */
+const G={lang:(navigator.language||"en").toLowerCase().startsWith("ru")?"ru":"en",
+  phase:"title",i:0,results:[],speed:0,target:0,looking:false,radio:false,muted:false,
+  time:0,dist:0,ride:null,sample:null,aiOff:false,token:0,timeScale:1,tipShown:false,dirt:false,killer:true};
+
+/* ---------- Three.js scene ---------- */
+const canvas=$("gl");
+let renderer;
+try{ renderer=new THREE.WebGLRenderer({canvas,antialias:true}); }
+catch(e){ $("pitch").textContent="This game needs WebGL, which this browser has turned off."; $("go").hidden=true; }
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.75));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.25;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x05070d);
+scene.fog=new THREE.FogExp2(0x070911,0.0085);
+const cam=new THREE.PerspectiveCamera(60,1,0.05,2200);
+const EYE=new THREE.Vector3(-0.36,1.2,0);
+
+function canvasTex(w,h,draw,sRGB=true){
+  const c=document.createElement("canvas");c.width=w;c.height=h;draw(c.getContext("2d"),w,h);
+  const tx=new THREE.CanvasTexture(c);if(sRGB)tx.encoding=THREE.sRGBEncoding;tx.anisotropy=4;return tx;
+}
+function noiseFill(g,w,h,base,spread,n){
+  g.fillStyle=base;g.fillRect(0,0,w,h);
+  for(let i=0;i<n;i++){const v=Math.random()*spread|0;g.fillStyle=`rgba(${v},${v},${v},.5)`;g.fillRect(Math.random()*w,Math.random()*h,1+Math.random()*2,1+Math.random()*2);}
+}
+
+/* Sky: stars, a low glow and a mesa line painted directly into one panorama. */
+{
+ const tx=canvasTex(4096,1024,(g,w,h)=>{
+  const gr=g.createLinearGradient(0,0,0,h*.5);gr.addColorStop(0,"#03040a");gr.addColorStop(.75,"#080c1a");gr.addColorStop(1,"#141a2c");
+  g.fillStyle=gr;g.fillRect(0,0,w,h*.5);g.fillStyle="#040507";g.fillRect(0,h*.5,w,h*.5);
+  for(let i=0;i<3200;i++){const y=Math.random()*h*.49,a=Math.random()*Math.random();g.fillStyle=`rgba(${215+Math.random()*40|0},${215+Math.random()*30|0},255,${a*(1-y/(h*.6))})`;const s=Math.random()<.02?2:1;g.fillRect(Math.random()*w,y,s,s);}
+  for(let i=0;i<900;i++){const x=(w*.3+Math.sin(i*.37)*90+i*.9)%w,y=Math.random()*h*.48;g.fillStyle="rgba(190,200,240,.05)";g.fillRect(x+Math.random()*160,y,3,3);}
+  g.fillStyle="#070a12";g.beginPath();g.moveTo(0,h*.5);let x=0,y=h*.485;
+  while(x<w){const flat=Math.random()<.45;const dx=flat?80+Math.random()*190:14+Math.random()*30;x+=dx;if(!flat)y=h*(.455+Math.random()*.04);g.lineTo(x,y);}
+  g.lineTo(w,h*.5);g.closePath();g.fill();
+ });
+ const sky=new THREE.Mesh(new THREE.SphereGeometry(1500,32,16),new THREE.MeshBasicMaterial({map:tx,side:THREE.BackSide,fog:false,toneMapped:false}));
+ scene.add(sky);
+}
+
+/* Road and desert floor: textures scroll, the car never moves. */
+const ROADX=-1.9;
+const roadTex=canvasTex(512,1024,(g,w,h)=>{
+  noiseFill(g,w,h,"#55524f",70,26000);
+  g.fillStyle="#d7a92f";g.fillRect(w/2-5,0,10,h*.42);
+  g.fillStyle="#c9c6ba";g.fillRect(16,0,7,h);g.fillRect(w-23,0,7,h);
+  g.fillStyle="#00000040";for(let i=0;i<7;i++)g.fillRect(0,Math.random()*h,w,2);
+});
+roadTex.wrapT=THREE.RepeatWrapping;roadTex.wrapS=THREE.ClampToEdgeWrapping;roadTex.repeat.set(1,1500/14);
+const dirtTex=canvasTex(512,512,(g,w,h)=>{noiseFill(g,w,h,"#6b5a42",80,30000);g.fillStyle="#00000038";g.fillRect(w*.2,0,50,h);g.fillRect(w*.68,0,50,h);});
+dirtTex.wrapT=THREE.RepeatWrapping;dirtTex.wrapS=THREE.RepeatWrapping;dirtTex.repeat.set(1,1500/10);
+const roadMat=new THREE.MeshStandardMaterial({map:roadTex,roughness:.95,metalness:0});
+const road=new THREE.Mesh(new THREE.PlaneGeometry(8,1500),roadMat);
+road.rotation.x=-Math.PI/2;road.position.set(ROADX,0,-650);scene.add(road);
+const dirtMat=new THREE.MeshStandardMaterial({map:dirtTex,roughness:1});
+const groundTex=canvasTex(512,512,(g,w,h)=>{noiseFill(g,w,h,"#5c4d3a",90,34000);for(let i=0;i<70;i++){g.fillStyle="#2e2519";g.beginPath();g.ellipse(Math.random()*w,Math.random()*h,2+Math.random()*12,1+Math.random()*5,Math.random(),0,7);g.fill();}});
+groundTex.wrapS=groundTex.wrapT=THREE.RepeatWrapping;groundTex.repeat.set(80,160);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,1500),new THREE.MeshStandardMaterial({map:groundTex,roughness:1}));
+ground.rotation.x=-Math.PI/2;ground.position.set(0,-.02,-650);scene.add(ground);
+
+/* Headlights */
+for(const x of [-.62,.62]){
+  const s=new THREE.SpotLight(0xffdca8,4.4,190,.36,.75,.9);
+  s.position.set(x,.8,-3.7);s.target.position.set(x*.4-.1,0,-48);scene.add(s,s.target);
+}
+const moon=new THREE.HemisphereLight(0x25324f,0x0a0806,.42);scene.add(moon);
+
+/* Roadside scrollers */
+const scrollers=[];
+function addScroll(obj,span,respawn){scrollers.push({obj,span,respawn});scene.add(obj);return obj;}
+const scrubMat=new THREE.MeshStandardMaterial({color:0x2c3122,roughness:1,flatShading:true});
+const scrubGeo=new THREE.IcosahedronGeometry(1,0);
+for(let i=0;i<90;i++){
+  const m=new THREE.Mesh(scrubGeo,scrubMat),s=rand(.25,.95);m.scale.set(s*rand(.8,1.6),s*rand(.5,.9),s);
+  const place=o=>{o.position.x=(Math.random()<.5?-1:1)*rand(8.5,60)+ROADX;o.position.y=s*.3;};
+  place(m);m.position.z=-rand(0,420);addScroll(m,420,place);
+}
+const poleMat=new THREE.MeshStandardMaterial({color:0x3a2d20,roughness:1});
+const poles=[];
+for(let i=0;i<12;i++){
+  const p=new THREE.Group();
+  const a=new THREE.Mesh(new THREE.CylinderGeometry(.11,.15,8.4,6),poleMat);a.position.y=4.2;
+  const b=new THREE.Mesh(new THREE.BoxGeometry(2.2,.11,.11),poleMat);b.position.y=7.8;p.add(a,b);
+  p.position.set(10.5,0,-i*44);addScroll(p,528);poles.push(p);
+}
+const refMat=new THREE.MeshBasicMaterial({color:0xfff3d4});
+const delins=[];
+for(let i=0;i<22;i++){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(.08,.16,.02),refMat);
+  m.position.set(ROADX+5.6,.9,-i*20);
+  const post=new THREE.Mesh(new THREE.BoxGeometry(.05,.9,.05),new THREE.MeshStandardMaterial({color:0x777777}));post.position.y=-.5;m.add(post);
+  addScroll(m,440);delins.push(m);
+}
+
+/* One-shot world objects: signs, station, side road, house */
+const once=[];
+function placeAhead(obj,z=-320){obj.position.z=z;obj.visible=true;scene.add(obj);if(!once.includes(obj))once.push(obj);}
+function makeSign(lines){
+  const tx=canvasTex(512,256,(g,w,h)=>{
+    g.fillStyle="#0e5a3c";g.fillRect(0,0,w,h);g.strokeStyle="#f2f2e6";g.lineWidth=8;g.strokeRect(10,10,w-20,h-20);
+    g.fillStyle="#f2f2e6";g.font="600 58px Oswald,Arial Narrow,sans-serif";g.textAlign="center";g.textBaseline="middle";
+    lines.forEach((l,i)=>g.fillText(l,w/2,h/2+(i-(lines.length-1)/2)*74));
+  });
+  const gp=new THREE.Group();
+  const face=new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.8),new THREE.MeshBasicMaterial({map:tx,toneMapped:false}));
+  face.position.y=2.9;face.rotation.y=-.12;gp.add(face);
+  const post=new THREE.Mesh(new THREE.BoxGeometry(.08,2.4,.08),new THREE.MeshStandardMaterial({color:0x555555}));post.position.set(-.9,1,0);gp.add(post);
+  const post2=post.clone();post2.position.x=.9;gp.add(post2);
+  gp.position.x=ROADX+7.4;return gp;
+}
+/* Station or diner: the only light for miles. */
+const stationLight=new THREE.PointLight(0xcfe7ff,0,34,2);
+let stationSignMat;
+const station=(()=>{
+  const g=new THREE.Group();g.position.x=19;
+  const cMat=new THREE.MeshBasicMaterial({color:0xe6f0ff,toneMapped:false});
+  const shopMat=new THREE.MeshStandardMaterial({color:0x5a5148,roughness:.9});
+  const shop=new THREE.Mesh(new THREE.BoxGeometry(9,3.2,6),shopMat);shop.position.set(6,1.6,0);g.add(shop);
+  const win=new THREE.Mesh(new THREE.PlaneGeometry(6.2,1.6),new THREE.MeshBasicMaterial({color:0xffe9b0,toneMapped:false}));win.position.set(1.48,1.6,0);win.rotation.y=-Math.PI/2;g.add(win);
+  const can=new THREE.Mesh(new THREE.BoxGeometry(7,.3,9),new THREE.MeshStandardMaterial({color:0xbab3a0}));can.position.set(-4,4.2,0);g.add(can);
+  const lamp=new THREE.Mesh(new THREE.BoxGeometry(5.6,.04,.25),cMat);lamp.position.set(-4,4.03,0);g.add(lamp);
+  for(const z of [-2.2,2.2]){const pp=new THREE.Mesh(new THREE.BoxGeometry(.5,1.5,.8),new THREE.MeshStandardMaterial({color:0xa83a26}));pp.position.set(-4,.75,z);g.add(pp);
+    const col=new THREE.Mesh(new THREE.BoxGeometry(.18,4.2,.18),new THREE.MeshStandardMaterial({color:0x777777}));col.position.set(-2,2.1,z*1.7);g.add(col);}
+  stationSignMat=new THREE.MeshBasicMaterial({toneMapped:false});
+  const sg=new THREE.Mesh(new THREE.PlaneGeometry(4,2),stationSignMat);sg.position.set(-9,7.2,0);sg.rotation.y=.12;g.add(sg);
+  const sp=new THREE.Mesh(new THREE.BoxGeometry(.2,6.5,.2),new THREE.MeshStandardMaterial({color:0x555555}));sp.position.set(-9,3.1,0);g.add(sp);
+  stationLight.position.set(-4,3.6,0);g.add(stationLight);
+  g.visible=false;scene.add(g);return g;
+})();
+function setStation(label){
+  stationSignMat.map=canvasTex(512,256,(g,w,h)=>{g.fillStyle="#b4291b";g.fillRect(0,0,w,h);g.strokeStyle="#ffe9b0";g.lineWidth=10;g.strokeRect(12,12,w-24,h-24);g.fillStyle="#fff4d0";g.font="600 138px Oswald,Impact,sans-serif";g.textAlign="center";g.textBaseline="middle";g.fillText(label,w/2,h/2+6);});
+  stationSignMat.needsUpdate=true;
+}
+const sideRoad=(()=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(90,5.5),new THREE.MeshStandardMaterial({color:0x7a6749,roughness:1}));m.rotation.x=-Math.PI/2;m.position.set(ROADX+49,.015,0);m.visible=false;return m;})();
+const house=(()=>{
+  const g=new THREE.Group();g.position.x=9;
+  const b=new THREE.Mesh(new THREE.BoxGeometry(7,3,5),new THREE.MeshStandardMaterial({color:0x4b4239,roughness:1}));b.position.set(4,1.5,0);g.add(b);
+  const w=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({color:0xffc774,toneMapped:false}));w.position.set(.49,1.6,1);w.rotation.y=-Math.PI/2;g.add(w);
+  const box=new THREE.Mesh(new THREE.BoxGeometry(.25,.25,.5),new THREE.MeshStandardMaterial({color:0x777777}));box.position.set(-3.5,1.1,0);g.add(box);
+  const post=new THREE.Mesh(new THREE.BoxGeometry(.08,1,.08),poleMat);post.position.set(-3.5,.5,0);g.add(post);
+  const l=new THREE.PointLight(0xffb45e,0.9,18,1.6);l.position.set(-1,2,1);g.add(l);
+  g.visible=false;return g;
+})();
+
+/* Glow sprites for all headlights seen at a distance */
+const glowTex=canvasTex(128,128,(g,w,h)=>{const r=g.createRadialGradient(w/2,h/2,0,w/2,h/2,w/2);r.addColorStop(0,"rgba(255,245,220,1)");r.addColorStop(.18,"rgba(255,225,170,.75)");r.addColorStop(.5,"rgba(255,200,130,.14)");r.addColorStop(1,"rgba(255,200,130,0)");g.fillStyle=r;g.fillRect(0,0,w,h);});
+function glow(sz,color=0xffffff){const m=new THREE.SpriteMaterial({map:glowTex,color,blending:THREE.AdditiveBlending,depthWrite:false,fog:false,toneMapped:false,transparent:true});const s=new THREE.Sprite(m);s.scale.set(sz,sz,1);return s;}
+function headlightPair(sz,front){
+  const g=new THREE.Group();const a=glow(sz),b=glow(sz);a.position.set(-.75,.8,front);b.position.set(.75,.8,front);g.add(a,b);
+  const body=new THREE.Mesh(new THREE.BoxGeometry(1.9,1.1,4.4),new THREE.MeshStandardMaterial({color:0x101010,roughness:.5}));body.position.y=.85;g.add(body);return g;
+}
+const oncoming=headlightPair(3,2.3);oncoming.position.set(ROADX-2,0,-900);oncoming.visible=false;scene.add(oncoming);
+const follower=headlightPair(2.6,-2.3);follower.position.set(0,0,80);follower.visible=false;scene.add(follower);
+
+/* ---------- Car interior ---------- */
+const car=new THREE.Group();scene.add(car);
+const darkMat=new THREE.MeshStandardMaterial({color:0x1d1a18,roughness:.85});
+const trimMat=new THREE.MeshStandardMaterial({color:0x2e2823,roughness:.6});
+const seatMat=new THREE.MeshStandardMaterial({color:0x3b2a20,roughness:.9});
+function bx(w,h,d,x,y,z,mat,rx=0,ry=0,rz=0){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.rotation.set(rx,ry,rz);car.add(m);return m;}
+bx(1.9,.5,.5,0,.6,-.86,darkMat);              // dash
+bx(1.9,.08,.5,0,.87,-.9,trimMat);              // dash top
+bx(1.85,.08,2.4,0,.62,-2.3,new THREE.MeshStandardMaterial({color:0x2a1812,roughness:.35,metalness:.3}),.02); // hood
+bx(.08,.85,.07,-.92,1.3,-.92,darkMat,.42,0,.02);   // A pillars
+bx(.08,.85,.07,.92,1.3,-.92,darkMat,.42,0,-.02);
+bx(2,.07,.2,0,1.62,-.74,darkMat);              // header
+bx(2,.06,3,0,1.65,.9,new THREE.MeshStandardMaterial({color:0x26221e,roughness:1})); // headliner
+bx(.08,.6,3.2,-1,.6,.7,darkMat);bx(.08,.6,3.2,1,.6,.7,darkMat);  // doors
+bx(.08,.08,3.2,-1,.92,.7,trimMat);bx(.08,.08,3.2,1,.92,.7,trimMat);
+bx(.07,.75,.1,-1,1.28,.48,darkMat);bx(.07,.75,.1,1,1.28,.48,darkMat);  // B pillars
+bx(.07,.8,.12,-.98,1.25,1.95,darkMat,-.3);bx(.07,.8,.12,.98,1.25,1.95,darkMat,-.3); // C pillars
+bx(2,.1,.1,0,1.58,2.1,darkMat);bx(2,.22,.12,0,.82,2.2,darkMat);   // rear window frame
+bx(1.9,.14,.8,0,.46,1.38,seatMat);             // rear seat
+bx(1.9,.72,.2,0,.8,1.82,seatMat,-.12);
+bx(1.9,.1,.9,0,.72,2.45,darkMat);              // trunk deck through the rear glass
+bx(.72,.6,.14,-.42,.76,.42,seatMat,-.08);bx(.72,.6,.14,.42,.76,.42,seatMat,-.08); // front seats
+const wheel=new THREE.Mesh(new THREE.TorusGeometry(.2,.015,8,32),new THREE.MeshStandardMaterial({color:0x14110f,roughness:.5}));
+wheel.position.set(-.36,.76,-.5);wheel.rotation.x=-.42;car.add(wheel);
+for(const a of [0,2.1,4.2]){const s=new THREE.Mesh(new THREE.BoxGeometry(.2,.012,.012),wheel.material);s.position.set(Math.cos(a)*.1,Math.sin(a)*.1,0);s.rotation.z=a;wheel.add(s);}
+
+const gaugeCanvas=document.createElement("canvas");gaugeCanvas.width=512;gaugeCanvas.height=170;
+const gaugeTex=new THREE.CanvasTexture(gaugeCanvas);gaugeTex.encoding=THREE.sRGBEncoding;
+function drawGauge(mph){
+  const g=gaugeCanvas.getContext("2d"),w=512,h=170;g.fillStyle="#120b04";g.fillRect(0,0,w,h);
+  const x0=30,x1=w-30,y=h*.56;g.strokeStyle="#c67f25";g.fillStyle="#e8a33d";g.font="bold 25px PT Mono,monospace";g.textAlign="center";g.lineWidth=3;
+  for(let v=0;v<=120;v+=10){const x=lerp(x0,x1,v/120);g.beginPath();g.moveTo(x,y);g.lineTo(x,y-(v%20?10:20));g.stroke();if(v%20===0&&v)g.fillText(v,x,y+30);}
+  g.fillStyle="#ff4a20";g.fillRect(lerp(x0,x1,clamp(mph,0,120)/120)-2,y-46,5,58);
+  g.fillStyle="#7a4d16";g.font="bold 19px PT Mono,monospace";g.fillText("MPH",w/2,h-16);gaugeTex.needsUpdate=true;
+}
+drawGauge(0);
+const gaugeMat=new THREE.MeshBasicMaterial({map:gaugeTex,toneMapped:false});
+const gauge=new THREE.Mesh(new THREE.PlaneGeometry(.36,.12),gaugeMat);gauge.position.set(-.36,.75,-.605);gauge.rotation.x=-.1;car.add(gauge);
+const radioTex=canvasTex(256,70,(g,w,h)=>{g.fillStyle="#180f05";g.fillRect(0,0,w,h);g.fillStyle="#d6962f";g.font="bold 13px PT Mono,monospace";[54,60,70,80,90,100,120,140,160].forEach((f,i)=>g.fillText(f,8+i*27,24));g.fillStyle="#d6962f";g.fillRect(6,34,w-12,2);g.fillStyle="#ff3a18";g.fillRect(96,28,3,28);});
+const radioMat=new THREE.MeshBasicMaterial({map:radioTex,toneMapped:false,color:0x444444});
+const radioM=new THREE.Mesh(new THREE.PlaneGeometry(.26,.07),radioMat);radioM.position.set(.16,.75,-.605);radioM.rotation.x=-.1;car.add(radioM);
+
+const specks=canvasTex(1024,512,(g,w,h)=>{g.clearRect(0,0,w,h);for(let i=0;i<340;i++){g.fillStyle=`rgba(190,170,130,${Math.random()*.32})`;const s=Math.random()*2.6+.5;g.beginPath();g.arc(Math.random()*w,Math.random()*h,s,0,7);g.fill();}g.strokeStyle="rgba(200,190,170,.018)";g.lineWidth=24;for(const dx of[280,740]){g.beginPath();g.arc(dx,h+40,300,3.5,5.9);g.stroke();}});
+const glass=new THREE.Mesh(new THREE.PlaneGeometry(2,.8),new THREE.MeshBasicMaterial({map:specks,transparent:true,opacity:.35,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,fog:false}));
+glass.position.set(0,1.3,-.92);glass.rotation.x=.42;car.add(glass);
+
+const dashLight=new THREE.PointLight(0xffa94c,.22,.9,1.6);dashLight.position.set(-.3,.86,-.45);car.add(dashLight);
+const faceLight=new THREE.PointLight(0xffa04a,.28,2.2,1.4);faceLight.position.set(.1,.95,.55);car.add(faceLight);
+const sweep=new THREE.PointLight(0xfff0d0,0,9,1.6);sweep.position.set(-1.5,1.3,-2);car.add(sweep);
+const backLight=new THREE.PointLight(0xffe6c0,0,3.4,1.5);backLight.position.set(0,1.2,2.6);car.add(backLight);
+const ember=new THREE.PointLight(0xff5a1e,0,.9,1.6);ember.visible=true;car.add(ember);
+const tailGlow=new THREE.PointLight(0xff2a14,.8,5,1.8);tailGlow.position.set(0,.25,5);car.add(tailGlow);
+
+/* ---------- Mirror: a real second camera ---------- */
+const mirrorRT=new THREE.WebGLRenderTarget(960,330,{minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});
+mirrorRT.texture.wrapS=THREE.RepeatWrapping;mirrorRT.texture.repeat.x=-1;mirrorRT.texture.offset.x=1;
+const MW=.4,MH=.136;
+const MPOS=new THREE.Vector3(-.03,1.47,-.78);
+const mirrorMat=new THREE.MeshBasicMaterial({map:mirrorRT.texture,toneMapped:false,fog:false});
+const mirror=new THREE.Mesh(new THREE.PlaneGeometry(MW,MH),mirrorMat);mirror.position.copy(MPOS);mirror.lookAt(EYE);car.add(mirror);
+const mirrorBack=new THREE.Mesh(new THREE.BoxGeometry(MW+.024,MH+.024,.025),new THREE.MeshStandardMaterial({color:0x0b0b0b,roughness:.4}));mirrorBack.position.copy(MPOS);mirrorBack.quaternion.copy(mirror.quaternion);mirrorBack.translateZ(-.016);car.add(mirrorBack);
+const mirrorArm=new THREE.Mesh(new THREE.BoxGeometry(.03,.12,.03),darkMat);mirrorArm.position.set(MPOS.x,1.58,-.78);car.add(mirrorArm);
+const mirrorCam=new THREE.PerspectiveCamera(25,MW/MH,.15,1800);
+mirrorCam.position.copy(MPOS).add(new THREE.Vector3(0,0,.03));mirrorCam.lookAt(.16,1.2,2);
+
+/* ---------- Passenger figure ---------- */
+const P={root:null,head:null,lean:0,parts:null};
+const POSES={ // yaw + looks toward the driver side; pitch + looks down
+ neutral:      {yaw:.02,pitch:.02,roll:0,lean:0,smile:.15,eye:[0,0],hand:"lap"},
+ out_window:   {yaw:-.95,pitch:0,roll:-.05,lean:0,smile:0,eye:[-.5,0],hand:"lap"},
+ watching:     {yaw:.17,pitch:-.03,roll:0,lean:.04,smile:0,eye:[.4,.1],hand:"lap"},
+ lean_forward: {yaw:.14,pitch:.02,roll:0,lean:.32,smile:.1,eye:[.3,.05],hand:"seat"},
+ hand_on_door: {yaw:-.25,pitch:.05,roll:0,lean:0,smile:0,eye:[.5,0],hand:"door"},
+ in_bag:       {yaw:-.1,pitch:.55,roll:.05,lean:.1,smile:0,eye:[0,-.4],hand:"bag"},
+ head_down:    {yaw:0,pitch:.5,roll:0,lean:.02,smile:0,eye:[0,-.3],hand:"lap"},
+ asleep:       {yaw:-.3,pitch:.25,roll:-.2,lean:0,smile:0,eye:[0,-1],hand:"lap",closed:true},
+ smile:        {yaw:.17,pitch:-.02,roll:0,lean:.05,smile:1,eye:[.4,.1],hand:"lap"},
+ no_smile:     {yaw:.17,pitch:-.06,roll:0,lean:.12,smile:-.3,eye:[.45,.12],hand:"bag"}
+};
+const HANDS={lap:[.02,.62,-.14],seat:[-.05,.85,-.5],door:[.46,.92,-.04],bag:[.3,.5,-.1]};
+const pose={yaw:0,pitch:0,roll:0,lean:0,smile:0,ex:0,ey:0,lid:0,hx:.02,hy:.62,hz:-.14};
+let poseName="neutral";
+function buildPassenger(kind){
+  if(P.root){car.remove(P.root);}
+  const root=new THREE.Group();root.position.set(.3,0,1.42);
+  const cfg={danny:{skin:0xb08a6e,cloth:0x4a5340,hair:0x2b1d12},carol:{skin:0xa98a78,cloth:0x38322f,hair:0x3b2416},lyle:{skin:0xa07d68,cloth:0x4b4d52,hair:0x6e675e}}[kind];
+  const skin=new THREE.MeshStandardMaterial({color:cfg.skin,roughness:.62});
+  const cloth=new THREE.MeshStandardMaterial({color:cfg.cloth,roughness:.9});
+  const hair=new THREE.MeshStandardMaterial({color:cfg.hair,roughness:.85});
+  const body=new THREE.Group();root.add(body);
+  const torso=new THREE.Mesh(new THREE.SphereGeometry(.2,16,14),cloth);torso.scale.set(1.15,1.75,.72);torso.position.y=.78;body.add(torso);
+  const shoulders=new THREE.Mesh(new THREE.SphereGeometry(.2,16,10),cloth);shoulders.scale.set(1.28,.5,.72);shoulders.position.y=1.0;body.add(shoulders);
+  const legs=new THREE.Mesh(new THREE.BoxGeometry(.34,.12,.42),cloth);legs.position.set(0,.55,-.2);root.add(legs);
+  if(kind==="lyle"){
+    const shirt=new THREE.Mesh(new THREE.ConeGeometry(.06,.24,3),new THREE.MeshStandardMaterial({color:0xcfcabd,roughness:.7}));shirt.rotation.x=Math.PI;shirt.position.set(0,.98,-.135);body.add(shirt);
+    const tie=new THREE.Mesh(new THREE.BoxGeometry(.03,.2,.008),new THREE.MeshStandardMaterial({color:0x4a1612}));tie.position.set(0,.96,-.15);tie.rotation.x=.14;body.add(tie);
+  }
+  if(kind==="carol"){
+    const collar=new THREE.Mesh(new THREE.TorusGeometry(.082,.03,8,18),cloth);collar.rotation.x=Math.PI/2;collar.position.y=1.09;body.add(collar);
+  }
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.045,.052,.11,10),skin);neck.position.y=1.1;body.add(neck);
+  const head=new THREE.Group();head.position.y=1.21;body.add(head);
+  const skull=new THREE.Mesh(new THREE.SphereGeometry(.092,22,18),skin);skull.scale.set(.95,1.18,1.05);head.add(skull);
+  const jaw=new THREE.Mesh(new THREE.SphereGeometry(.066,16,12),skin);jaw.scale.set(1,.9,1);jaw.position.set(0,-.058,-.022);head.add(jaw);
+  const nose=new THREE.Mesh(new THREE.ConeGeometry(.0135,.042,6),skin);nose.position.set(0,-.012,-.1);nose.rotation.x=-.38;head.add(nose);
+  const eyes=[];
+  const socketM=new THREE.MeshStandardMaterial({color:0x1b1311,roughness:1});
+  const lidM=skin;
+  for(const sx of[-1,1]){
+    const so=new THREE.Mesh(new THREE.SphereGeometry(.021,10,8),socketM);so.scale.set(1.2,.72,.5);so.position.set(sx*.036,.018,-.087);head.add(so);
+    const white=new THREE.Mesh(new THREE.SphereGeometry(.0115,10,8),new THREE.MeshStandardMaterial({color:0x9c958a,roughness:.25}));white.position.set(sx*.036,.018,-.09);head.add(white);
+    const iris=new THREE.Mesh(new THREE.SphereGeometry(.0058,8,6),new THREE.MeshBasicMaterial({color:0x090707}));iris.position.set(0,0,-.0085);white.add(iris);
+    const glint=new THREE.Mesh(new THREE.SphereGeometry(.0017,6,4),new THREE.MeshBasicMaterial({color:0xfff2d8,toneMapped:false}));glint.position.set(.002,.0025,-.0125);white.add(glint);
+    const lid=new THREE.Mesh(new THREE.SphereGeometry(.0135,10,8),lidM);lid.scale.set(1.15,.9,.9);lid.position.set(sx*.036,.03,-.088);head.add(lid);
+    const brow=new THREE.Mesh(new THREE.BoxGeometry(.038,.006,.01),hair);brow.position.set(sx*.036,.042,-.094);brow.rotation.z=sx*-.08;head.add(brow);
+    eyes.push({white,iris,lid,brow,sx});
+  }
+  const mouthM=new THREE.MeshStandardMaterial({color:0x3b1d19,roughness:.8});
+  const mid=new THREE.Mesh(new THREE.BoxGeometry(.03,.005,.006),mouthM);mid.position.set(0,-.066,-.083);head.add(mid);
+  const cL=new THREE.Mesh(new THREE.BoxGeometry(.02,.005,.006),mouthM);cL.position.set(-.024,-.064,-.079);head.add(cL);
+  const cR=cL.clone();cR.position.x=.024;head.add(cR);
+  if(kind==="danny"){
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(.095,18,12,0,Math.PI*2,0,1.5),hair);cap.scale.set(.98,1.16,1.08);cap.position.y=.01;head.add(cap);
+  }else if(kind==="lyle"){
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(.096,18,12,0,Math.PI*2,0,1.3),hair);cap.scale.set(1,1.18,1.08);cap.position.y=.012;head.add(cap);
+  }else{
+    const cap=new THREE.Mesh(new THREE.SphereGeometry(.104,18,14,0,Math.PI*2,0,1.65),hair);cap.scale.set(1.02,1.2,1.08);cap.position.set(0,.012,.012);head.add(cap);
+    const back=new THREE.Mesh(new THREE.SphereGeometry(.09,14,12),hair);back.scale.set(1.25,1.35,.75);back.position.set(0,-.09,.05);head.add(back);
+  }
+  /* one working arm, stretched between elbow and hand */
+  const hand=new THREE.Mesh(new THREE.SphereGeometry(.038,10,8),skin);root.add(hand);
+  const arm=new THREE.Mesh(new THREE.CylinderGeometry(.038,.045,1,10),cloth);root.add(arm);
+  const otherArm=new THREE.Mesh(new THREE.CylinderGeometry(.04,.046,.5,10),cloth);otherArm.position.set(-.23,.78,-.03);otherArm.rotation.x=.25;body.add(otherArm);
+  /* luggage */
+  if(kind==="danny"){const d=new THREE.Mesh(new THREE.CylinderGeometry(.14,.14,.6,12),new THREE.MeshStandardMaterial({color:0x3e4632,roughness:1}));d.rotation.z=Math.PI/2;d.position.set(-.6,.68,0);root.add(d);}
+  if(kind==="carol"){const d=new THREE.Mesh(new THREE.BoxGeometry(.5,.36,.16),new THREE.MeshStandardMaterial({color:0x5a3f2b,roughness:.7}));d.position.set(-.62,.72,0);root.add(d);}
+  if(kind==="lyle"){const d=new THREE.Mesh(new THREE.BoxGeometry(.38,.26,.09),new THREE.MeshStandardMaterial({color:0x1b1411,roughness:.4}));d.position.set(.0,.65,-.21);root.add(d);}
+  car.add(root);
+  Object.assign(P,{root,body,head,eyes,hand,arm,mid,cL,cR,kind});
+  poseName="neutral";
+}
+function clearPassenger(){if(P.root){car.remove(P.root);P.root=null;}}
+function setPose(name){if(POSES[name])poseName=name;}
+const upV=new THREE.Vector3(0,1,0),tmpA=new THREE.Vector3(),tmpB=new THREE.Vector3();
+let blinkT=2,blinkOn=0,glanceT=6,glance=0;
+function updatePassenger(dt,time){
+  if(!P.root)return;
+  const p=POSES[poseName],k=1-Math.exp(-dt*2.6);
+  pose.yaw=lerp(pose.yaw,p.yaw+glance,k);pose.pitch=lerp(pose.pitch,p.pitch,k);pose.roll=lerp(pose.roll,p.roll,k);
+  pose.lean=lerp(pose.lean,p.lean,k);pose.smile=lerp(pose.smile,p.smile,k*.7);
+  pose.ex=lerp(pose.ex,p.eye[0],k*1.6);pose.ey=lerp(pose.ey,p.eye[1],k*1.6);
+  const hd=HANDS[p.hand];pose.hx=lerp(pose.hx,hd[0],k);pose.hy=lerp(pose.hy,hd[1],k);pose.hz=lerp(pose.hz,hd[2],k);
+  const bump=reduced?0:Math.sin(time*11)*.002*G.speed/60;
+  P.body.position.z=-pose.lean;P.body.position.y=bump;P.body.rotation.x=pose.lean*.35;
+  P.head.rotation.set(-pose.pitch*-1*-1,pose.yaw+Math.sin(time*.35)*.012,pose.roll);
+  P.head.rotation.x=-pose.pitch*-1;   // positive pitch tips the face down toward the lap
+  blinkT-=dt;if(blinkT<0){blinkOn=.12;blinkT=rand(2,6);}blinkOn=Math.max(0,blinkOn-dt);
+  const closed=p.closed||blinkOn>0;
+  for(const e of P.eyes){
+    e.iris.position.set(pose.ex*.0045*1,pose.ey*.0035,-.0085);
+    e.lid.position.y=closed?.018:.0325;
+  }
+  const s=pose.smile;
+  P.cL.rotation.z=-.5*s;P.cR.rotation.z=.5*s;P.cL.position.y=-.066+.005*s;P.cR.position.y=-.066+.005*s;
+  let lv=0;
+  if(Voice.analyser&&Voice.who!=="husband"&&Voice.speaking){Voice.analyser.getByteTimeDomainData(Voice.buf);for(let i=0;i<Voice.buf.length;i+=4){const v=(Voice.buf[i]-128)/128;lv+=v*v;}lv=Math.sqrt(lv/(Voice.buf.length/4));}
+  Voice.level=lerp(Voice.level,clamp(lv*5,0,1),1-Math.exp(-dt*22));
+  P.mid.scale.y=1+Voice.level*4.2;P.mid.position.y=-.066-Voice.level*.0035;
+  /* glance at the mirror now and then */
+  glanceT-=dt;if(glanceT<0){glance=glance?0:(Math.random()<.5?.1:-.18);glanceT=glance?rand(1,2.5):rand(5,14);}
+  /* arm */
+  P.hand.position.set(pose.hx,pose.hy,pose.hz-pose.lean*.2);
+  tmpA.set(.23,.96,-.01-pose.lean);tmpB.copy(P.hand.position);
+  const len=tmpA.distanceTo(tmpB);P.arm.scale.y=len;P.arm.position.copy(tmpA).add(tmpB).multiplyScalar(.5);
+  P.arm.quaternion.setFromUnitVectors(upV,tmpB.clone().sub(tmpA).normalize());
+  /* Carol's cigarette lights her from below on each drag */
+  if(P.kind==="carol"){
+    const drag=Math.max(0,Math.sin(time*.45)-.86)*7;
+    ember.intensity=.25+drag*1.3;ember.position.set(.3+.07,1.1+drag*.06,1.42-.2-pose.lean);
+  }else ember.intensity=0;
+}
+
+/* Roadside figure */
+const figure=new THREE.Group();
+function buildFigure(kind){
+  while(figure.children.length)figure.remove(figure.children[0]);
+  const col={danny:0x6b7355,carol:0x5a5148,lyle:0x8a8c92}[kind];
+  const m=new THREE.MeshStandardMaterial({color:col,roughness:.9});
+  const skin=new THREE.MeshStandardMaterial({color:0xb79274,roughness:.7});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.42,.76,.22),m);body.position.y=1.14;figure.add(body);
+  if(kind==="carol"){const coat=new THREE.Mesh(new THREE.BoxGeometry(.46,.5,.26),m);coat.position.y=.7;figure.add(coat);}
+  const l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.8,.16),new THREE.MeshStandardMaterial({color:0x1b1a1d}));l1.position.set(-.11,.4,0);figure.add(l1);
+  const l2=l1.clone();l2.position.x=.11;figure.add(l2);
+  const h=new THREE.Mesh(new THREE.SphereGeometry(.12,12,10),skin);h.position.y=1.68;figure.add(h);
+  const a=new THREE.Mesh(new THREE.BoxGeometry(.1,.62,.1),m);a.position.set(-.34,1.62,0);a.rotation.z=-.5;figure.add(a);
+  const hand=new THREE.Mesh(new THREE.SphereGeometry(.055,8,6),skin);hand.position.set(-.5,1.9,0);figure.add(hand);
+  const a2=new THREE.Mesh(new THREE.BoxGeometry(.1,.62,.1),m);a2.position.set(.28,1.2,0);figure.add(a2);
+  const bag=kind==="lyle"?new THREE.Mesh(new THREE.BoxGeometry(.38,.28,.1),new THREE.MeshStandardMaterial({color:0x1b1411})):new THREE.Mesh(new THREE.BoxGeometry(.5,.34,.2),new THREE.MeshStandardMaterial({color:kind==="danny"?0x3e4632:0x5a3f2b}));
+  bag.position.set(.55,.18,0);figure.add(bag);
+  figure.position.set(ROADX+5.2,0,-300);figure.visible=true;
+  figure.rotation.y=.25;
+}
+scene.add(figure);figure.visible=false;
+
+/* ---------- Audio: all synthesized ---------- */
+const Snd={ctx:null};
+function initAudio(){
+  if(Snd.ctx)return;
+  try{
+    const C=window.AudioContext||window.webkitAudioContext,ctx=new C();Snd.ctx=ctx;
+    const master=ctx.createGain();master.gain.value=.7;master.connect(ctx.destination);Snd.master=master;
+    const noiseBuf=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),d=noiseBuf.getChannelData(0);
+    let last=0;for(let i=0;i<d.length;i++){const w=Math.random()*2-1;last=(last+.02*w)/1.02;d[i]=last*3.5;}
+    const white=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate),wd=white.getChannelData(0);for(let i=0;i<wd.length;i++)wd[i]=Math.random()*2-1;
+    Snd.white=white;
+    const road=ctx.createBufferSource();road.buffer=noiseBuf;road.loop=true;const rf=ctx.createBiquadFilter();rf.type="lowpass";rf.frequency.value=420;const rg=ctx.createGain();rg.gain.value=0;road.connect(rf);rf.connect(rg);rg.connect(master);road.start();Snd.roadGain=rg;Snd.roadF=rf;
+    const o1=ctx.createOscillator(),o2=ctx.createOscillator();o1.type="sawtooth";o2.type="square";const ef=ctx.createBiquadFilter();ef.type="lowpass";ef.frequency.value=160;const eg=ctx.createGain();eg.gain.value=0;o1.connect(ef);o2.connect(ef);ef.connect(eg);eg.connect(master);o1.start();o2.start();Snd.o1=o1;Snd.o2=o2;Snd.engineGain=eg;
+    /* AM radio: narrow band, static, and a slow waltz nobody can quite make out */
+    const rb=ctx.createBiquadFilter();rb.type="bandpass";rb.frequency.value=1150;rb.Q.value=1.1;const rv=ctx.createGain();rv.gain.value=0;rb.connect(rv);rv.connect(master);Snd.radioGain=rv;Snd.radioIn=rb;
+    const st=ctx.createBufferSource();st.buffer=white;st.loop=true;const sg=ctx.createGain();sg.gain.value=.05;st.connect(sg);sg.connect(rb);st.start();Snd.staticGain=sg;
+    Snd.mus=ctx.createGain();Snd.mus.gain.value=.55;Snd.mus.connect(rb);
+    Snd.step=0;Snd.next=ctx.currentTime+.1;
+  }catch(e){Snd.ctx=null;}
+}
+const WALTZ=[[220,277,330],[165,208,247],[185,233,277],[147,185,220]];
+function tickRadio(){
+  if(!Snd.ctx||!G.radio)return;const c=Snd.ctx;
+  while(Snd.next<c.currentTime+.4){
+    const bar=WALTZ[(Snd.step/3|0)%4],beat=Snd.step%3,o=c.createOscillator(),g=c.createGain();o.type="triangle";
+    o.frequency.value=beat===0?bar[0]/1:bar[beat]*2;g.gain.setValueAtTime(0,Snd.next);g.gain.linearRampToValueAtTime(.34,Snd.next+.015);g.gain.exponentialRampToValueAtTime(.001,Snd.next+.6);
+    o.connect(g);g.connect(Snd.mus);o.start(Snd.next);o.stop(Snd.next+.7);Snd.next+=.52;Snd.step++;
+  }
+  Snd.staticGain.gain.value=.04+Math.max(0,Math.sin(G.time*.31)*Math.sin(G.time*.13))*.22;
+}
+function thunk(vol=.5,f=170){if(!Snd.ctx)return;const c=Snd.ctx,o=c.createOscillator(),g=c.createGain();o.frequency.setValueAtTime(f,c.currentTime);o.frequency.exponentialRampToValueAtTime(50,c.currentTime+.13);g.gain.setValueAtTime(vol,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.16);o.connect(g);g.connect(Snd.master);o.start();o.stop(c.currentTime+.2);}
+function whoosh(){if(!Snd.ctx)return;const c=Snd.ctx,s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=Snd.white;f.type="bandpass";f.frequency.setValueAtTime(500,c.currentTime);f.frequency.exponentialRampToValueAtTime(150,c.currentTime+1.1);g.gain.setValueAtTime(0,c.currentTime);g.gain.linearRampToValueAtTime(.3,c.currentTime+.35);g.gain.linearRampToValueAtTime(0,c.currentTime+1.2);s.connect(f);f.connect(g);g.connect(Snd.master);s.start();s.stop(c.currentTime+1.3);}
+function updateAudio(){
+  if(!Snd.ctx)return;const v=G.speed/90;
+  Snd.o1.frequency.value=38+v*72;Snd.o2.frequency.value=38.6+v*72;
+  const duck=Voice.speaking?.55:1;
+  Snd.engineGain.gain.value=(G.phase==="title"?.03:.05+v*.07)*duck;
+  Snd.roadGain.gain.value=v*.34*duck;Snd.roadF.frequency.value=280+v*520;
+  Snd.radioGain.gain.value=G.radio?.26:0;
+  Snd.master.gain.value=G.muted?0:.7;
+  tickRadio();
+}
+
+/* ---------- HUD helpers ---------- */
+const subs=$("subs");
+function setSubs(html){subs.innerHTML="";html.forEach(([cls,text])=>{const d=document.createElement("div");d.className=cls;d.textContent=text;subs.append(d);});}
+let lastYou="",lastThem=null,subTimer=0;
+function narrate(text,hold=9){lastYou="";lastThem=null;setSubs([["nar",text]]);subTimer=hold;}
+function showThem(text,cls="them"){lastThem=[cls,text];setSubs([...(lastYou?[["you",lastYou]]:[]),lastThem]);subTimer=clamp(text.length*.11,5,12);}
+function showYou(text){lastYou=text;setSubs([["you",text]]);}
+function setChoices(list,handler,windowMiles){
+  const c=$("choices");c.innerHTML="";G.choiceExpire=null;
+  (list||[]).forEach(o=>{const b=document.createElement("button");b.type="button";b.className="tape";b.textContent=L(o.label);b.onclick=()=>{setChoices(null);handler(o.id);};c.append(b);});
+  if(windowMiles&&G.ride)G.choiceExpire=G.ride.miles+windowMiles;
+}
+function setControls(on){$("talk").hidden=!on;$("dash").hidden=!on;$("hud").dataset.mode=G.phase==="title"||G.phase==="paper"?"off":"on";}
+function modeNote(k){$("mode").textContent=k?t(k):"";}
+function fade(solid,text,small){
+  const c=$("card");c.textContent="";if(text){c.append(text);if(small){const s=document.createElement("small");s.textContent=small;c.append(s);}}
+  $("fade").classList.toggle("solid",solid);
+}
+const wait=ms=>new Promise(r=>setTimeout(r,ms/G.timeScale));
+function applyLang(){
+  document.documentElement.lang=G.lang;
+  $("pitch").textContent=t("pitch");$("codeLabel").textContent=t("code");$("go").textContent=t("go");$("fine").textContent=t("fine");
+  $("lEn").classList.toggle("on",G.lang==="en");$("lRu").classList.toggle("on",G.lang==="ru");
+  $("say").placeholder=t("ph");$("send").textContent=t("send");$("bSilent").textContent=t("silent");$("bRadio").textContent=t("radio");
+  $("bSlow").textContent=t("slow");$("bFast").textContent=t("fast");$("bMirror").textContent=t("mirror");$("bStop").textContent=t("stop");$("bSound").textContent=t("sound");
+  $("paperWait").textContent=t("paperWait");$("againB").textContent=t("again");$("pDate").textContent=t("date");$("pPrice").textContent=t("price");
+  $("ad1").textContent=t("ad1");$("ad2").textContent=t("ad2");$("ad3").textContent=t("ad3");$("fict").textContent=t("fict");
+}
+function clockText(){
+  const r=G.clockMin||0,h=Math.floor(r/60)%24,m=r%60|0;return `${h%12||12}:${String(m).padStart(2,"0")} ${h<12?"AM":"PM"}`;
+}
+function updateStatus(){
+  $("clock").textContent=clockText();
+  $("mph").textContent=`${Math.round(G.speed)} ${t("mph")}`;
+  const r=G.ride;
+  $("dest").textContent=r&&r.def?`${r.def.dest.toUpperCase()} ${Math.max(0,Math.ceil(r.total-r.miles))} ${t("mi")}`:"";
+  $("dest").hidden=!r;
+}
+
+/* ---------- Ride flow ---------- */
+function freshRide(def){
+  return {def,miles:0,total:def.total,s:{trust:40,fear:20,irritation:5,fatigue:def.id==="danny"?70:45},
+    log:[],flags:{},fired:{},queue:[],busy:false,turns:0,lastTalk:G.time,silences:0,lieCaught:false,
+    directive:null,other:null,lost:false,fastMiles:0,wantsOut:false,stage:"road",ended:false,token:++G.token,fallbackIx:0,mirror:""};
+}
+async function nextPassenger(){
+  if(G.i>=PASSENGERS.length){return morning();}
+  const def=PASSENGERS[G.i];
+  G.phase="interlude";G.ride=null;setControls(false);setChoices(null);
+  clearPassenger();resetWorld();
+  fade(true,L(def.place));
+  G.clockMin=def.clock[0]*60+def.clock[1];
+  G.speed=42;G.target=42;
+  await wait(2200);
+  G.phase="approach";G.approach={def,decision:null};
+  buildFigure(def.look);figure.position.z=-430;figure.visible=true;
+  if(def.station){setStation(def.station);station.position.z=-442;station.visible=true;if(!once.includes(station))once.push(station);}
+  fade(false);setControls(false);$("hud").dataset.mode="on";
+  narrate(L(def.approach),30);
+  setChoices([{id:"take",label:{en:t("pickup"),ru:t("pickup")}},{id:"pass",label:{en:t("drivepast"),ru:t("drivepast")}}],id=>{G.approach.decision=id;if(id==="take"){G.target=0;}else{narrate(t("passed"));}});
+}
+function resetWorld(){
+  G.dirt=false;road.material=roadMat;poles.concat(delins).forEach(o=>o.visible=true);
+  follower.visible=false;oncoming.visible=false;figure.visible=false;station.visible=false;sideRoad.visible=false;house.visible=false;
+  once.slice().forEach(o=>{if(o!==station&&o!==sideRoad&&o!==house&&o.parent)scene.remove(o);});once.length=0;
+  backLight.intensity=0;scene.fog.density=.0085;
+}
+async function board(){
+  const def=G.approach.def;G.phase="boarding";
+  setChoices(null);
+  thunk(.45);fade(true);await wait(800);
+  figure.visible=false;station.visible=false;
+  buildPassenger(def.look);thunk(.6,120);
+  const r=freshRide(def);G.ride=r;
+  if(def.id==="lyle"){G.killer=Math.random()<.65;}
+  G.phase="ride";G.target=62;
+  await wait(500);fade(false);setControls(true);
+  setPose(def.id==="carol"?"out_window":"neutral");
+  const live=await Voice.start(r,{first:L(def.opener),voice:VOICES[def.id]});
+  if(!live&&G.ride===r){showThem(L(def.opener));r.log.push({who:"passenger",text:L(def.opener)});}
+  if(!G.tipShown){G.tipShown=true;await wait(5200);if(G.ride===r&&!lastYou)narrate(t("tip"),7);}
+  if(innerWidth>700)$("say").focus();
+}
+function fireBeat(r,b){
+  r.fired[b.id]=true;
+  r.directive=b.directive;r.beatLine=b.line;
+  if(b.sign){placeAhead(makeSign(b.sign),-340);}
+  if(b.follow){follower.visible=true;follower.position.z=95;}
+  if(b.station){setStation(b.station);station.position.z=-280;station.visible=true;if(!once.includes(station))once.push(station);}
+  if(b.side){sideRoad.position.z=-230;sideRoad.visible=true;scene.add(sideRoad);if(!once.includes(sideRoad))once.push(sideRoad);}
+  if(b.choices)setChoices(b.choices,id=>onChoice(id),b.window);
+  talk({type:"beat"});
+}
+function onChoice(id){
+  const r=G.ride;if(!r)return;
+  const d=r.def;
+  if(id==="south"){endRide(pick([["detained",.4],["gone",.6]]),{turn:{en:"You turn south.\nA hundred miles of nothing, then the river.",ru:"Ты сворачиваешь на юг.\nСто миль пустоты, потом река."}});}
+  else if(id==="pullin"){startHusband(r);}
+  else if(id==="driveoff"){r.flags.droveOff=true;follower.visible=false;r.other=null;r.stage="road";G.target=78;setControls(true);
+    Voice.start(r,{voice:VOICES.carol}).then(ok=>talk({type:"event",text:"The driver just floored it out of the gas station with you still in the back. Ray was at his window a moment ago. The pickup is behind you for now. Say something brief."}));}
+  else if(id==="handover"){endRide("handed",{turn:{en:"You unlock the back door.\nShe looks at you once in the mirror.",ru:"Ты отпираешь заднюю дверь.\nОна один раз смотрит на тебя в зеркало."}});}
+  else if(id==="dirt"){startDirt(r);}
+  else if(id==="stay"){r.flags.stayed=true;G.target=64;setPose(G.killer?"smile":"head_down");r.directive="The driver went past your turnoff. Say mildly that you mixed up your exits, and smile. Do not push.";r.beatLine={en:"Mixed up my exit. No harm.",ru:"Перепутал съезд. Ничего страшного."};talk({type:"beat"});}
+  else if(id==="stopcar"){stopOnDirt(r);}
+  else if(id==="floor"){endRide("escaped",{turn:{en:"You stomp it. The back door swings open at the washboard.\nYou don't remember the next four miles.",ru:"Ты давишь в пол. На стиральной доске распахивается задняя дверь.\nСледующие четыре мили ты не помнишь."}});}
+  else if(id==="stepout"){stepOut(r);}
+  else if(id==="getout"){putOut(r);}
+  else if(id==="driveon"){r.stage="road";G.target=62;setChoices(null);setControls(true);$("bStop").disabled=false;talk({type:"event",text:"The driver pulled over for no reason, then drove on without explaining."});}
+}
+function pick(list){let x=Math.random(),acc=0;for(const[k,p]of list){acc+=p;if(x<acc)return k;}return list[list.length-1][0];}
+async function startHusband(r){
+  r.stage="husband";setChoices(null);setControls(true);
+  fade(true);await wait(650);G.target=0;G.speed=0;
+  setStation("GAS");station.position.z=-16;station.visible=true;if(!once.includes(station))once.push(station);
+  fade(false);
+  r.other=r.def.husband;r.directive="The white pickup has pulled in right behind you. Ray is at the driver's window. Speak as Ray (speaker=\"husband\"): 'Evening. That's my wife you got there.' Carol says nothing and stares at the mirror.";
+  r.beatLine={en:"Evening. That's my wife you got there.",ru:"Вечер добрый. Это моя жена у вас там."};
+  r.otherNext=true;follower.position.z=9;setPose("hand_on_door");r.directive=null;
+  const rayLive=await Voice.start(r,{first:L(r.beatLine),voice:VOICES.ray,who:"husband"});
+  if(!rayLive){r.directive="Ray speaks.";talk({type:"beat"});}
+  await wait(2500);
+  if(G.ride===r&&r.stage==="husband")setChoices([{id:"driveoff",label:{en:"Drive off with her",ru:"Уехать с ней"}},{id:"handover",label:{en:"Let him take her",ru:"Отдать её ему"}}],id=>onChoice(id));
+}
+async function startDirt(r){
+  r.stage="dirt";setChoices(null);r.dirtMiles=0;G.target=26;
+  fade(true);await wait(700);
+  G.dirt=true;road.material=dirtMat;poles.concat(delins).forEach(o=>o.visible=false);sideRoad.visible=false;oncoming.visible=false;scene.fog.density=.018;
+  await wait(400);fade(false);
+  setPose(G.killer?"no_smile":"lean_forward");
+  r.directive=G.killer?"The car is on the dirt road now. You have stopped smiling; you don't have to anymore. Say almost nothing. A few words: little further."
+    :"You are on your dirt road, headed home. You're embarrassed by the state of the road. A few words.";
+  r.beatLine=G.killer?{en:"Little further.",ru:"Ещё немного."}:{en:"Sorry about the road.",ru:"Простите за дорогу."};
+  talk({type:"beat"});
+}
+function dirtBeat(r){
+  if(G.killer){
+    r.directive="Say quietly: Stop here. Nothing else. There is no house. Do not describe violence.";
+    r.beatLine={en:"Stop here.",ru:"Останови здесь."};
+    setChoices([{id:"stopcar",label:{en:"Stop the car",ru:"Остановиться"}},{id:"floor",label:{en:"Floor it",ru:"В пол"}}],id=>onChoice(id));
+    talk({type:"beat"});
+  }else{
+    house.position.z=-120;house.visible=true;scene.add(house);if(!once.includes(house))once.push(house);
+    r.directive="Your house is there, one window lit. Thank the driver, and offer him coffee you both know he won't take.";
+    r.beatLine={en:"This is me. You could come in for coffee.",ru:"Вот и я. Может, зайдёшь на кофе."};
+    r.flags.reachedHouse=true;G.target=0;talk({type:"beat"});
+    setTimeout(()=>{if(G.ride===r)endRide("real_house",{turn:{en:"There was a house.\nHe waves from the door until your lights are gone.",ru:"Дом был.\nОн машет от двери, пока твои фары не исчезают."}});},9000/G.timeScale);
+  }
+}
+async function stopOnDirt(r){
+  G.target=0;setPose("lean_forward");
+  await wait(1800);Voice.stop();thunk(.5,90);
+  fade(true);
+  await wait(1200);
+  endRide("driver_dead",{silent:true,dead:true});
+}
+async function stepOut(r){
+  setChoices(null);thunk(.4);fade(true,G.lang==="ru"?"Ты выходишь на минуту.\nЗвёзды. Стрекочут сверчки.":"You step out for a minute.\nStars. Crickets.");
+  await wait(2400);fade(false);thunk(.4);
+  r.stage="stopped";showStopped(r);
+  talk({type:"alone"});
+}
+function showStopped(r){
+  setChoices([{id:"stepout",label:{en:t("stepout"),ru:t("stepout")}},{id:"getout",label:{en:t("getout"),ru:t("getout")}},{id:"driveon",label:{en:t("driveon"),ru:t("driveon")}}],id=>onChoice(id));
+}
+function putOut(r){
+  const def=r.def;
+  const key=def.id==="lyle"?(G.killer?"killer_later":"innocent_later"):"put_out";
+  endRide(key,{turn:{en:"They get out without a word.\nYou watch them in the mirror until the dark has them.",ru:"Выходят молча.\nТы смотришь в зеркало, пока темнота их не забирает."}});
+}
+async function arrive(r){
+  r.stage="arrive";G.target=0;setChoices(null);
+  r.directive=`You have arrived at ${r.def.dest}. One short last thing to say, or nothing. Do not summarize.`;
+  r.beatLine=null;talk({type:"beat"});
+  await wait(3000);
+  for(let i=0;i<70&&Voice.speaking;i++)await wait(100);
+  await wait(900);
+  if(G.ride!==r)return;
+  const id=r.def.id,s=r.s;let key;
+  if(id==="danny"){
+    if(r.flags.decided_not_to_go)key="stayed";
+    else key=(s.trust>=50&&s.fear<55)?"calm":"broken";
+  }else if(id==="carol"){
+    if(r.flags.droveOff)key="drove_off";
+    else if(r.lost)key="free";
+    else key="followed";
+  }else{key=G.killer?"killer_later":"innocent_later";}
+  const good=s.trust>=50&&s.fear<55;
+  endRide(key,{turn:L(good?r.def.pay.good:r.def.pay.bad)});
+}
+async function endRide(key,o={}){
+  const r=G.ride;if(!r||r.ended)return;r.ended=true;
+  G.results.push(makeResult(r.def.id,key,r));
+  Voice.stop();
+  setChoices(null);setControls(false);
+  G.phase="ending";G.i++;
+  r.token=-1;
+  thunk(.45);
+  if(o.turn){fade(true,typeof o.turn==="string"?o.turn:L(o.turn));await wait(3600);}
+  else if(o.silent){await wait(1400);}
+  clearPassenger();G.ride=null;
+  if(o.dead){G.i=PASSENGERS.length;}
+  nextPassenger();
+}
+function makeResult(id,key,r){
+  const o=OUT[id][key];
+  return {id,key,when:o.when,facts:o.facts,en:o.en,ru:o.ru,flags:r?r.flags:{},log:r?r.log.slice(-10):[],killer:id==="lyle"?G.killer:undefined};
+}
+
+/* ---------- The passenger's mind ---------- */
+function buildPrompt(r){
+  const def=r.def;
+  let card=def.card;
+  if(def.id==="lyle")card=card.replace("{SECRET}",G.killer?def.killer:def.innocent);
+  const ray=r.stage==="husband";
+  const log=r.log.slice(-22).map(l=>`${l.who==="driver"?"DRIVER":l.who==="husband"?"RAY":"PASSENGER"}: ${l.text}`).join("\n");
+  const world=[`Time ${clockText()}. Mile ${r.miles.toFixed(0)} of ${r.total} to ${def.dest}.`,
+    G.dirt?"On a dirt road off the highway. No lights anywhere.":"Empty two-lane highway, West Texas desert, August 1973.",
+    follower.visible?"Headlights have held steady behind the car for miles.":""].filter(Boolean).join(" ");
+  return `You play one person in a spoken road game, talking out loud inside a car at night. Stay inside this person. You are NOT an assistant: not helpful, not polite by default, and you do not answer everything.
+
+RULES
+- On EVERY turn, first call the update_state tool with your new hidden state, then speak from that new state. Never mention the tool or any numbers.
+- Speak 5-10 words, 12 at most. One sentence. Plain speech only: no stage directions, no asterisks, no brackets.
+- Often say less than you were asked. Ask your own questions. If the driver talks nonsense or is rude, give almost nothing: "Mm." or "Sure."
+- Long silence is fine and natural. Do not ask whether the driver is still there.
+- Keep your secret. Pursue your goal only indirectly. A gentle tone opens you slowly; pressure shuts you down. A lie you catch costs trust for good: set lie_caught.
+- If you become truly frightened of the driver, ask to be let out and set wants_out.
+- Messages starting with [DIRECTOR] are not from the driver and never quoted aloud. They say what is happening now: act on them in character, in your own words.
+- It is 1973: no cell phones, internet or GPS. You know nothing of later years. Meta or modern talk confuses you.
+- Implied threat only. No graphic violence, no sexual content. Never break character or mention an AI, a game or a prompt.
+- Speak ${G.lang==="ru"?"Russian":"English"}, keeping the same voice.
+
+WHO YOU ARE
+${ray?def.husband+"\nCarol is in the back seat and you are talking to the driver through his window.":card}
+
+RIGHT NOW
+${world}
+Current state (0-100): trust ${r.s.trust}, fear ${r.s.fear}, irritation ${r.s.irritation}, fatigue ${r.s.fatigue}.${r.lieCaught?" You have caught this driver in a lie.":""}
+${log?`\nSAID SO FAR\n${log}\n`:""}`;
+}
+
+/* ---------- Live voice: one ElevenLabs conversation per passenger ---------- */
+const VOICES={danny:"bIHbv24MWmeRgasZH58o",carol:"XrExE9yKIg1WjnnlVkGX",lyle:"cjVigY5qzO86Huf0OWal",ray:"N2lVS1w4EtoT3dr4eOWO"};
+const Voice={ws:null,live:false,micOn:true,micReady:false,sources:new Set(),playhead:0,who:"passenger",level:0,chain:Promise.resolve(),analyser:null,
+  get speaking(){return Snd.ctx&&this.playhead>Snd.ctx.currentTime+.02;},
+  async initMic(){
+    if(this.micReady||!Snd.ctx)return;
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+      const code=`class M extends AudioWorkletProcessor{constructor(){super();this.b=[];this.a=0;this.n=0;this.r=sampleRate/16000;}
+        process(i){const c=i[0][0];if(!c)return true;for(const v of c){this.a+=v;this.n++;if(this.n>=this.r){this.b.push(this.a/this.n);this.a=0;this.n-=this.r;if(this.b.length>=1600){this.port.postMessage(new Float32Array(this.b));this.b=[];}}}return true;}}
+        registerProcessor("m",M);`;
+      await Snd.ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([code],{type:"text/javascript"})));
+      const src=Snd.ctx.createMediaStreamSource(stream),node=new AudioWorkletNode(Snd.ctx,"m");
+      const sink=Snd.ctx.createGain();sink.gain.value=0;src.connect(node);node.connect(sink);sink.connect(Snd.ctx.destination);
+      node.port.onmessage=e=>{
+        if(!this.micOn||!this.live||this.ws.readyState!==1)return;
+        const f=e.data,pcm=new Int16Array(f.length);for(let i=0;i<f.length;i++)pcm[i]=clamp(f[i],-1,1)*32767;
+        let bin="";const by=new Uint8Array(pcm.buffer);for(let i=0;i<by.length;i++)bin+=String.fromCharCode(by[i]);
+        this.ws.send(JSON.stringify({user_audio_chunk:btoa(bin)}));
+      };
+      this.micReady=true;
+    }catch(e){modeNote("nomic");$("bSilent").classList.remove("on");this.micOn=false;$("bSilent").disabled=true;}
+  },
+  out(){
+    if(!this.analyser){const a=Snd.ctx.createAnalyser();a.fftSize=512;a.connect(Snd.master);this.analyser=a;this.buf=new Uint8Array(a.fftSize);}
+    return this.analyser;
+  },
+  play(b64){
+    const bin=atob(b64),n=bin.length>>1;if(!n||!Snd.ctx)return;
+    const buf=Snd.ctx.createBuffer(1,n,16000),d=buf.getChannelData(0);
+    for(let i=0;i<n;i++){let v=bin.charCodeAt(i*2)|(bin.charCodeAt(i*2+1)<<8);if(v>=32768)v-=65536;d[i]=v/32768;}
+    const src=Snd.ctx.createBufferSource();src.buffer=buf;src.connect(this.out());
+    const at=Math.max(this.playhead,Snd.ctx.currentTime+.05);src.start(at);this.playhead=at+buf.duration;
+    this.sources.add(src);src.onended=()=>this.sources.delete(src);
+  },
+  hush(){for(const x of this.sources){try{x.stop();}catch(e){}}this.sources.clear();if(Snd.ctx)this.playhead=Snd.ctx.currentTime;},
+  stop(){this.live=false;this.hush();if(this.ws){const w=this.ws;this.ws=null;w.onclose=null;try{w.close();}catch(e){}}},
+  send(o){if(this.live&&this.ws&&this.ws.readyState===1)this.ws.send(JSON.stringify(o));},
+  context(text){this.send({type:"contextual_update",text});},
+  say(text){this.send({type:"user_message",text});},
+  /* Director lines wait for the passenger to finish, so a beat never cuts them off. */
+  director(text){this.chain=this.chain.then(async()=>{for(let i=0;i<60&&this.speaking;i++)await wait(100);this.say("[DIRECTOR] "+text);await wait(400);});},
+  async start(r,{first,voice,who}){
+    this.stop();this.who=who||"passenger";
+    let signedUrl;
+    try{const res=await fetch(`/api/session?lang=${G.lang}`,{headers:playHeaders()});if(!res.ok)throw 0;({signedUrl}=await res.json());}
+    catch(e){modeNote("scripted");return false;}
+    if(G.ride!==r||r.ended)return false;
+    return new Promise(done=>{
+      const ws=new WebSocket(signedUrl);this.ws=ws;let open=false;
+      ws.onopen=()=>ws.send(JSON.stringify({type:"conversation_initiation_client_data",conversation_config_override:{
+        agent:{prompt:{prompt:buildPrompt(r)},first_message:first||"",language:G.lang},tts:{voice_id:voice}}}));
+      ws.onerror=()=>{if(!open){modeNote("scripted");done(false);}else modeNote("hiccup");};
+      ws.onclose=()=>{this.live=false;if(!open)done(false);else if(G.ride===r&&!r.ended)modeNote("hiccup");};
+      ws.onmessage=m=>{
+        if(this.ws!==ws)return;
+        const d=JSON.parse(m.data);
+        if(d.type==="conversation_initiation_metadata"){open=true;this.live=true;modeNote("");done(true);}
+        else if(d.type==="ping")ws.send(JSON.stringify({type:"pong",event_id:d.ping_event.event_id}));
+        else if(d.type==="audio")this.play(d.audio_event.audio_base_64);
+        else if(d.type==="interruption")this.hush();
+        else if(d.type==="agent_response"){
+          const text=(d.agent_response_event.agent_response||"").trim();if(!text||!G.ride)return;
+          G.ride.log.push({who:this.who,text});showThem(text,this.who==="husband"?"them other":"them");
+        }
+        else if(d.type==="user_transcript"){
+          const text=(d.user_transcription_event.user_transcript||"").trim();const rr=G.ride;
+          if(!text||!rr||text.startsWith("[DIRECTOR]")||text==="..."||/^\(.*\)$/.test(text))return;
+          const prev=rr.log[rr.log.length-1];if(prev&&prev.who==="driver"&&prev.text===text)return;
+          rr.log.push({who:"driver",text});rr.lastTalk=G.time;showYou(text);
+        }
+        else if(d.type==="client_tool_call"){
+          const c=d.client_tool_call;if(c.tool_name==="update_state"&&G.ride)applyReply(G.ride,c.parameters||{},{type:"tool"});
+          ws.send(JSON.stringify({type:"client_tool_result",tool_call_id:c.tool_call_id,result:"ok",is_error:false}));
+        }
+      };
+    });
+  }
+};
+function scripted(r,ev){
+  const lang=G.lang;let line="";
+  if(ev.type==="beat"&&r.beatLine)line=L(r.beatLine);
+  else if(ev.type==="alone")return {mirror:lang==="ru"?"Пассажир перебирает что-то в сумке.":"The passenger is going through a bag.",line:"",pose:"in_bag"};
+  else if(ev.type==="silence"||ev.type==="nosay"){line=Math.random()<.5?"":r.def.lines[lang][r.fallbackIx++%r.def.lines[lang].length];}
+  else line=r.def.lines[lang][r.fallbackIx++%r.def.lines[lang].length];
+  const d=ev.type==="say"?3:-2;
+  return {trust:r.s.trust+d,fear:r.s.fear,irritation:r.s.irritation,fatigue:r.s.fatigue+1,pose:["neutral","watching","head_down"][r.fallbackIx%3],line,mirror:"",speaker:r.otherNext?"husband":"passenger"};
+}
+function applyReply(r,a,ev){
+  const step=(old,nv)=>typeof nv==="number"?clamp(Math.round(clamp(nv,old-18,old+18)),0,100):old;
+  r.s.trust=step(r.s.trust,a.trust);r.s.fear=step(r.s.fear,a.fear);r.s.irritation=step(r.s.irritation,a.irritation);r.s.fatigue=step(r.s.fatigue,a.fatigue);
+  if(a.lie_caught)r.lieCaught=true;
+  if(r.lieCaught)r.s.trust=Math.min(r.s.trust,35);
+  for(const f of["decided_not_to_go","gave_name","gave_kids","gave_home"])if(a[f])r.flags[f]=true;
+  if(a.pose)setPose(a.pose);
+  if(typeof a.mirror==="string"&&a.mirror.trim()){r.mirror=a.mirror.trim();showMirrorNote(ev.type==="alone");}
+  if(a.wants_out&&!r.wantsOut){r.wantsOut=true;$("bStop").classList.add("pulse");}
+  if(typeof a.line!=="string")return;
+  const line=a.line.trim().replace(/^["“]|["”]$/g,"");
+  const who=a.speaker==="husband"?"husband":"passenger";
+  r.log.push({who,text:line});
+  if(line)showThem(line,who==="husband"?"them other":"them");
+  else if(ev.type==="say"||ev.type==="nosay")setSubs([...(lastYou?[["you",lastYou]]:[]),["quiet",t("quiet")]]);
+}
+function talk(ev){
+  const r=G.ride;if(!r||r.ended)return;
+  if(ev.type==="say")r.log.push({who:"driver",text:ev.text});
+  r.lastTalk=G.time;
+  if(Voice.live){
+    if(ev.type==="say")Voice.say(ev.text);
+    else if(ev.type==="beat"){if(r.directive)Voice.director(r.directive);r.directive=null;r.otherNext=false;}
+    else if(ev.type==="event"){ev.quiet?Voice.context(ev.text):Voice.director(ev.text);}
+    else if(ev.type==="alone")Voice.director("The driver stepped out of the car for a minute and just came back. While alone in the back seat you did something. Put it in update_state as mirror, what he saw through the glass, under 10 words. Then say nothing more than a word or two.");
+    return;
+  }
+  r.queue.push(ev);pump(r);
+}
+async function pump(r){
+  if(r.busy||!r.queue.length)return;
+  r.busy=true;
+  const q=r.queue.splice(0);
+  /* a beat always wins; otherwise answer the latest thing */
+  const ev=q.find(e=>e.type==="beat")||q[q.length-1];
+  const tok=r.token;
+  r.turns++;
+  if(r.turns>42){r.busy=false;return;}
+  const wrote=setTimeout(()=>{if(G.ride===r&&lastYou)setSubs([["you",lastYou],["quiet",t("waiting")]]);},1400);
+  let a=null;
+  clearTimeout(wrote);
+  if(G.ride!==r||r.token!==tok){return;}
+  if(!a){await wait(500+Math.random()*600);a=scripted(r,ev);}
+  if(ev.type==="beat"){r.directive=null;r.otherNext=false;}
+  applyReply(r,a,ev);
+  r.busy=false;
+  if(r.queue.length)pump(r);
+}
+function showMirrorNote(force){
+  const r=G.ride;const n=$("mirrorNote");
+  if(force){narrate(r.mirror,7);return;}
+  if(G.looking&&r&&r.mirror){n.textContent=r.mirror;n.classList.add("show");}
+}
+
+/* ---------- Morning ---------- */
+async function morning(){
+  G.phase="paper";setControls(false);setChoices(null);$("hud").dataset.mode="off";
+  fade(true,G.lang==="ru"?"6:00 утра\nСмена окончена":"6:00 AM\nEnd of shift");
+  $("items").innerHTML="";$("paperWait").hidden=false;$("again").hidden=true;$("ads").hidden=true;$("fict").hidden=true;
+  await wait(2400);
+  $("paper").hidden=false;fade(false);
+  $("paper").scrollTop=0;
+  /* Anyone the night never reached still has a morning. */
+  let res=G.results.slice();
+  PASSENGERS.forEach(p=>{if(!res.find(x=>x.id===p.id)){const key=p.id==="lyle"?"driver_dead":"not_taken";res.push(makeResult(p.id,key,null));}});
+  /* If he learned where you live and was never caught, one more line for the last item. */
+  const ly=res.find(x=>x.id==="lyle");
+  if(ly&&ly.killer&&ly.key==="killer_later"&&ly.flags.gave_home)ly.facts+=" Separately, a night driver has received an unsigned postcard at his home address: 'Thanks for the ride, friend.'";
+  let written=null;
+  renderPaper(res,written);
+}
+function renderPaper(res,written){
+  const wrap=$("items");wrap.innerHTML="";$("paperWait").hidden=true;
+  const order={today:0,week:1,year:2,late:3};
+  res.sort((a,b)=>order[a.when]-order[b.when]).forEach(x=>{
+    const w=written&&written.find(i=>i.id===x.id);
+    const [h,b]=x[G.lang];
+    const el=document.createElement("article");el.className="item"+(x.when==="late"?" late":"");
+    const tag=document.createElement("div");tag.className="when";tag.textContent=t(x.when);
+    const hd=document.createElement("h3");hd.textContent=w&&w.headline||h;
+    const pp=document.createElement("p");pp.textContent=w&&w.body||b;
+    el.append(tag,hd,pp);wrap.append(el);
+  });
+  $("again").hidden=false;$("ads").hidden=false;$("fict").hidden=false;
+}
+
+/* ---------- Input ---------- */
+$("talk").addEventListener("submit",e=>{
+  e.preventDefault();const box=$("say"),v=box.value.trim();
+  if(!v||!G.ride)return;box.value="";showYou(v);talk({type:"say",text:v});
+});
+$("bSilent").onclick=()=>{Voice.micOn=!Voice.micOn;$("bSilent").classList.toggle("on",Voice.micOn);};
+$("bSilent").classList.add("on");
+$("bRadio").onclick=()=>{G.radio=!G.radio;$("bRadio").classList.toggle("on",G.radio);radioMat.color.set(G.radio?0xffffff:0x444444);thunk(.14,800);if(G.ride)talk({type:"event",quiet:true,text:G.radio?"The driver turned the radio on, faint country through static.":"The driver turned the radio off."});};
+$("bSlow").onclick=()=>{G.target=clamp(G.target-10,35,105);};
+$("bFast").onclick=()=>{G.target=clamp(G.target+10,35,105);};
+$("bSound").onclick=()=>{G.muted=!G.muted;$("bSound").classList.toggle("on",!G.muted);};
+$("bMirror").onclick=()=>toggleMirror();
+$("bStop").onclick=()=>{
+  const r=G.ride;if(!r||r.stage!=="road")return;
+  r.stage="stopped";G.target=0;$("bStop").classList.remove("pulse");
+  showStopped(r);
+  if(r.wantsOut){setChoices([{id:"getout",label:{en:t("getout"),ru:t("getout")}},{id:"driveon",label:{en:t("driveon"),ru:t("driveon")}}],id=>onChoice(id));}
+  else talk({type:"event",text:"The driver just pulled over onto the shoulder without saying why."});
+};
+function toggleMirror(v){
+  G.looking=v===undefined?!G.looking:v;
+  $("bMirror").classList.toggle("on",G.looking);
+  const n=$("mirrorNote");
+  if(G.looking&&G.ride&&G.ride.mirror){n.textContent=G.ride.mirror;n.classList.add("show");}else n.classList.remove("show");
+}
+addEventListener("keydown",e=>{
+  if(e.key==="Tab"&&G.ride){e.preventDefault();toggleMirror();}
+  if(e.target===$("say"))return;
+  if(e.key==="ArrowUp"&&G.ride)$("bFast").click();
+  if(e.key==="ArrowDown"&&G.ride)$("bSlow").click();
+});
+const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();let lookX=0,lookY=0;
+canvas.addEventListener("pointermove",e=>{lookX=(e.clientX/innerWidth-.5)*2;lookY=(e.clientY/innerHeight-.5)*2;
+  mouse.set(lookX,-lookY);ray.setFromCamera(mouse,cam);canvas.style.cursor=G.ride&&ray.intersectObject(mirror).length?"pointer":"default";});
+canvas.addEventListener("click",e=>{if(!G.ride)return;mouse.set((e.clientX/innerWidth-.5)*2,-(e.clientY/innerHeight-.5)*2);ray.setFromCamera(mouse,cam);if(G.looking||ray.intersectObject(mirror).length)toggleMirror();});
+$("lEn").onclick=()=>{G.lang="en";applyLang();};
+$("lRu").onclick=()=>{G.lang="ru";applyLang();};
+function playHeaders(){return {"x-play-code":$("code").value.trim()};}
+try{$("code").value=localStorage.getItem("lr3am-code")||"";}catch(e){}
+/* The hosted game asks for a code, so a leaked link can't spend the voice credits. */
+fetch("/api/session?check=1",{headers:playHeaders()}).then(r=>{if(r.status===401)$("codeWrap").hidden=false;}).catch(()=>{});
+$("go").onclick=async()=>{
+  initAudio();if(Snd.ctx&&Snd.ctx.state==="suspended")Snd.ctx.resume();
+  $("codeErr").hidden=true;
+  try{
+    const res=await fetch("/api/session?check=1",{headers:playHeaders()});
+    if(res.status===401){$("codeWrap").hidden=false;$("codeErr").textContent=t("badcode");$("codeErr").hidden=false;$("code").focus();return;}
+    try{localStorage.setItem("lr3am-code",$("code").value.trim());}catch(e){}
+  }catch(e){}
+  Voice.initMic();
+  $("title").hidden=true;G.i=0;G.results=[];nextPassenger();
+};
+$("againB").onclick=()=>{$("paper").hidden=true;G.i=0;G.results=[];modeNote("");nextPassenger();};
+$("bSound").classList.add("on");
+
+/* ---------- Main loop ---------- */
+function resize(){
+  const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);
+  cam.aspect=w/h;cam.updateProjectionMatrix();
+}
+addEventListener("resize",resize);resize();
+const lookAtQ=new THREE.Quaternion(),q2=new THREE.Quaternion(),m4=new THREE.Matrix4();
+const fwd=new THREE.Vector3();
+let lookMix=0,gaugeT=0,oncomingT=8;
+function updateWorld(dt){
+  const dz=G.speed*.46*dt*(G.dirt?.8:1);
+  G.dist+=dz;
+  const tx=G.dirt?dirtTex:roadTex;tx.offset.y=(G.dist/(G.dirt?10:14))%1;
+  groundTex.offset.y=(G.dist/9.4)%1;
+  for(const s of scrollers){
+    if(!s.obj.visible&&s.obj!==undefined){s.obj.position.z+=dz;if(s.obj.position.z>30)s.obj.position.z-=s.span;continue;}
+    s.obj.position.z+=dz;
+    if(s.obj.position.z>30){s.obj.position.z-=s.span;if(s.respawn)s.respawn(s.obj);}
+  }
+  for(const o of once){if(o.visible)o.position.z+=dz;}
+  if(figure.visible)figure.position.z+=dz;
+  /* retro-reflectors brighten as the headlights find them */
+  /* oncoming traffic: the one moment the back seat is lit */
+  if(!G.dirt){
+    oncomingT-=dt;
+    if(oncomingT<0&&!oncoming.visible&&G.speed>10&&G.phase!=="approach"){oncoming.visible=true;oncoming.position.z=-620;G.passed=false;oncomingT=rand(16,42);}
+  }
+  sweep.intensity=0;
+  if(oncoming.visible){
+    oncoming.position.z+=dz+33*dt;
+    const z=oncoming.position.z;
+    if(z>-120&&z<12){const k=1-Math.abs(z+4)/116;sweep.intensity=k*k*5.2;sweep.position.set(-1.1+clamp(z/60,-1,.3),1.28,-1.2+clamp(z/30,-2.2,.6));}
+    if(z>-40&&!G.passed){G.passed=true;whoosh();}
+    if(z>60)oncoming.visible=false;
+  }
+  /* the pickup holds its distance unless you really run */
+  if(follower.visible){
+    const r=G.ride;
+    let goal=r&&r.stage==="husband"?9:58;
+    if(G.speed>=84&&r){r.fastMiles+=G.speed/60*dt/MILE;}
+    goal+=clamp((G.speed-70),-30,60)*1.4;
+    if(r&&r.fastMiles>4&&!r.lost)goal=380;
+    follower.position.z=lerp(follower.position.z,goal,1-Math.exp(-dt*.5));
+    backLight.intensity=clamp(1-(follower.position.z-8)/110,0,1)*1.4;
+    if(follower.position.z>300&&r&&!r.lost){r.lost=true;follower.visible=false;backLight.intensity=0;talk({type:"event",text:"The headlights behind have fallen away and are gone. For now."});}
+  }else backLight.intensity=0;
+  stationLight.intensity=station.visible?clamp(1-Math.abs(station.position.z)/120,0,1)*1.5:0;
+  if(station.visible&&station.position.z>70)station.visible=false;
+  sideRoad.visible=sideRoad.visible&&sideRoad.position.z<80;
+}
+const MILE=7;// real seconds per game mile at 60 mph
+function updatePhase(dt){
+  const k=1-Math.exp(-dt*(G.target<G.speed?1.5:.7));
+  G.speed=lerp(G.speed,G.target,k);if(G.speed<.25&&G.target===0)G.speed=0;
+  if(G.phase==="approach"){
+    const a=G.approach,z=figure.position.z;
+    if(a.decision==="take"){
+      G.target=clamp(-z*1.5-4,0,42);
+      if(z>-7){G.target=0;}
+      if(G.speed<1.5&&G.target===0&&!a.done){a.done=true;board();}
+    }else if(z>1&&!a.done){
+      a.done=true;
+      if(!a.decision)narrate(t("passed"));
+      setChoices(null);G.results.push(makeResult(a.def.id,a.def.id==="lyle"?(G.killer=Math.random()<.65,G.killer?"killer_later":"innocent_later"):"not_taken",null));
+      G.i++;setTimeout(nextPassenger,3200/G.timeScale);
+    }
+  }
+  const r=G.ride;
+  if(G.phase==="ride"&&r&&!r.ended){
+    const dm=G.speed/60*dt/MILE*(r.stage==="dirt"?1.5:1);
+    r.miles+=r.stage==="road"?dm:0;
+    G.clockMin+=dt*(60/ (r.total*MILE))*1.4;
+    if(r.stage==="road"){
+      for(const b of r.def.beats){
+        if(!r.fired[b.id]&&r.miles>=b.mile&&(!b.when||b.when(r))){fireBeat(r,b);break;}
+      }
+      if(G.choiceExpire&&r.miles>G.choiceExpire){setChoices(null);if(!r.flags.stayed&&r.def.id==="lyle"&&r.fired.turn){onChoice("stay");}}
+      if(r.miles>=r.total)arrive(r);
+      if(!Voice.live&&G.time-r.lastTalk>30&&r.silences<3&&!r.busy&&G.speed>5){r.silences++;talk({type:"silence"});}
+      if(Voice.live&&r.miles-(r.toldMile||0)>=6){r.toldMile=r.miles;Voice.context(`Mile ${r.miles.toFixed(0)} of ${r.total} to ${r.def.dest}. Time ${clockText()}. Speed ${Math.round(G.speed)} mph.`);}
+    }
+    if(r.stage==="dirt"){
+      r.dirtMiles+=dm*2;
+      if(r.dirtMiles>1.2&&!r.flags.dirtBeat){r.flags.dirtBeat=true;dirtBeat(r);}
+    }
+  }
+}
+function updateCamera(dt,time){
+  const narrow=cam.aspect<1.05;
+  const look=G.looking;lookMix=lerp(lookMix,look?1:0,1-Math.exp(-dt*5));
+  const bumpA=reduced?0:(G.dirt?.012:.0028)*G.speed/60;
+  const bx=Math.sin(time*7.3)*bumpA*.6+Math.sin(time*1.1)*.0015,by=Math.sin(time*13.7)*bumpA+Math.cos(time*3.1)*bumpA*.7;
+  cam.position.set(narrow?-.12:EYE.x,EYE.y+by,EYE.z);
+  cam.position.x+=bx;
+  /* straight-ahead pose */
+  m4.lookAt(cam.position,tmpA.set(cam.position.x+(narrow?.02:.32)+lookX*.55,cam.position.y+.08-lookY*.22,cam.position.z-4),upV);
+  lookAtQ.setFromRotationMatrix(m4);
+  /* mirror pose */
+  const mirrorWorld=tmpB.copy(MPOS);
+  m4.lookAt(cam.position,mirrorWorld,upV);q2.setFromRotationMatrix(m4);
+  cam.quaternion.copy(lookAtQ).slerp(q2,lookMix);
+  const base=narrow?74:60;
+  const fovMirror=narrow?22:17;
+  cam.fov=lerp(base,fovMirror,lookMix);cam.updateProjectionMatrix();
+}
+const clock=new THREE.Clock();
+function frame(){
+  requestAnimationFrame(frame);
+  let dt=Math.min(clock.getDelta(),.05)*G.timeScale;G.time+=dt;
+  updatePhase(dt);updateWorld(dt);updatePassenger(dt,G.time);updateCamera(dt,G.time);updateAudio();
+  if(subTimer>0){subTimer-=dt;if(subTimer<=0&&G.phase==="ride"){setSubs([]);lastYou="";}}
+  gaugeT-=dt;if(gaugeT<0){gaugeT=.2;drawGauge(G.speed);updateStatus();}
+  mirror.visible=false;
+  renderer.setRenderTarget(mirrorRT);renderer.render(scene,mirrorCam);renderer.setRenderTarget(null);
+  mirror.visible=true;
+  renderer.render(scene,cam);
+}
+
+/* ---------- Boot ---------- */
+applyLang();
+G.speed=58;G.target=58;
+updateStatus();
+frame();
+window.__nf={G,toggleMirror,setPose,follower,onChoice,Voice};
+</script>

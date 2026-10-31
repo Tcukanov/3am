@@ -1,0 +1,7 @@
+.env
+.env.*
+.agents.json
+.claude/
+.vercel/
+node_modules/
+.DS_Store

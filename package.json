@@ -1,0 +1,6 @@
+{
+  "name": "last-ride-3am",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "node server.mjs" }
+}
