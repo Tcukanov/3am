@@ -1132,11 +1132,15 @@ function buildPrompt(r){
     G.dirt?"On a dirt road off the highway. No lights anywhere.":"Empty two-lane highway, West Texas desert, August 1973.",
     "The car radio plays old country quietly through static.",
     follower.visible?"Headlights have held steady behind the car for miles.":""].filter(Boolean).join(" ");
-  return `You play one person in a spoken road game, talking out loud inside a car at night. Stay inside this person. You are NOT an assistant: not helpful, not polite by default, and you do not answer everything.
+  const langRule=G.lang==="ru"?"ЯЗЫК: говори ТОЛЬКО по-русски, каждое слово, естественной разговорной речью, на каком бы языке ни говорил водитель. Английский запрещён. The notes below are in English for reference only: everything you say aloud must be in Russian.":"LANGUAGE: speak English only.";
+  return `${langRule}
+
+You play one person in a spoken road game, talking out loud inside a car at night. Stay inside this person. You are NOT an assistant: not helpful, not polite by default, and you do not answer everything.
 
 RULES
 - On EVERY turn, first call the update_state tool with your new hidden state, then speak from that new state. Never mention the tool or any numbers.
-- Speak 5-10 words, 12 at most. One sentence. Plain speech only: no stage directions, no asterisks, no brackets.
+- Speak 5-10 words, 12 at most. One sentence.
+- Everything you write is read aloud. Write only the words this person says. Never describe actions, surroundings or feelings, and never use parentheses, asterisks or brackets. If you would only act or stay quiet, put it in update_state as mirror and say one short word, like "${G.lang==="ru"?"Мм.":"Mm."}"
 - Often say less than you were asked. Ask your own questions. If the driver talks nonsense or is rude, give almost nothing: "Mm." or "Sure."
 - You are in the back seat of a night taxi and owe the driver a fare. How much you like him decides whether you tip. Do not bring up tipping yourself.
 - Long silence is fine and natural. Do not ask whether the driver is still there.
@@ -1145,7 +1149,6 @@ RULES
 - Messages starting with [DIRECTOR] are not from the driver and never quoted aloud. They say what is happening now: act on them in character, in your own words.
 - It is 1973: no cell phones, internet or GPS. You know nothing of later years. Meta or modern talk confuses you.
 - Implied threat only. No graphic violence, no sexual content. Never break character or mention an AI, a game or a prompt.
-- Speak ${G.lang==="ru"?"Russian":"English"}, keeping the same voice.
 
 WHO YOU ARE
 ${ray?def.husband+"\nCarol is in the back seat and you are talking to the driver through his window.":card}
@@ -1153,7 +1156,8 @@ ${ray?def.husband+"\nCarol is in the back seat and you are talking to the driver
 RIGHT NOW
 ${world}
 Current state (0-100): trust ${r.s.trust}, fear ${r.s.fear}, irritation ${r.s.irritation}, fatigue ${r.s.fatigue}.${r.lieCaught?" You have caught this driver in a lie.":""}
-${log?`\nSAID SO FAR\n${log}\n`:""}`;
+${log?`\nSAID SO FAR\n${log}\n`:""}
+${langRule}`;
 }
 
 /* ---------- Live voice: one ElevenLabs conversation per passenger ---------- */
@@ -1197,9 +1201,9 @@ const Voice={ws:null,live:false,micOn:true,micReady:false,sources:new Set(),play
   context(text){this.send({type:"contextual_update",text});},
   say(text){this.send({type:"user_message",text});},
   /* Director lines wait for the passenger to finish, so a beat never cuts them off. */
-  director(text){this.chain=this.chain.then(async()=>{for(let i=0;i<60&&this.speaking;i++)await wait(100);this.say("[DIRECTOR] "+text);await wait(400);});},
+  director(text){this.chain=this.chain.then(async()=>{for(let i=0;i<60&&this.speaking;i++)await wait(100);this.say("[DIRECTOR] "+text+(G.lang==="ru"?" Отвечай вслух только по-русски.":""));await wait(400);});},
   async start(r,{first,voice,who}){
-    this.stop();this.who=who||"passenger";
+    this.stop();this.who=who||"passenger";this.dropAudio=false;this.fixes=0;
     let signedUrl;
     try{const res=await fetch(`/api/session?lang=${G.lang}`,{headers:playHeaders()});if(!res.ok)throw 0;({signedUrl}=await res.json());}
     catch(e){modeNote("scripted");return false;}
@@ -1215,10 +1219,18 @@ const Voice={ws:null,live:false,micOn:true,micReady:false,sources:new Set(),play
         const d=JSON.parse(m.data);
         if(d.type==="conversation_initiation_metadata"){open=true;this.live=true;modeNote("");done(true);}
         else if(d.type==="ping")ws.send(JSON.stringify({type:"pong",event_id:d.ping_event.event_id}));
-        else if(d.type==="audio")this.play(d.audio_event.audio_base_64);
-        else if(d.type==="interruption")this.hush();
+        else if(d.type==="audio"){if(!this.dropAudio)this.play(d.audio_event.audio_base_64);}
+        else if(d.type==="interruption"){this.hush();this.dropAudio=false;}
         else if(d.type==="agent_response"){
-          const text=(d.agent_response_event.agent_response||"").trim();if(!text||!G.ride)return;
+          /* A reply that is only stage directions, or in the wrong language, never reaches the player. */
+          const text=(d.agent_response_event.agent_response||"").replace(/\([^)]*\)|\[[^\]]*\]|\*[^*]*\*/g,"").replace(/\s+/g," ").trim();if(!G.ride)return;
+          const wrong=G.lang==="ru"&&(text.match(/[a-z]/gi)||[]).length>(text.match(/[а-яё]/gi)||[]).length;
+          if(!text||wrong){
+            this.hush();this.dropAudio=true;
+            if(wrong&&this.fixes<3){this.fixes++;this.say("[DIRECTOR] Ты ответил не по-русски. Скажи то же самое вслух по-русски, только сами слова.");}
+            return;
+          }
+          this.dropAudio=false;
           G.ride.log.push({who:this.who,text});showThem(text,this.who==="husband"?"them other":"them");
         }
         else if(d.type==="user_transcript"){
